@@ -8,6 +8,8 @@
 #include "xlsdraw/resource.hpp"
 
 int main() {
+  // test07 は「テキスト付き図形を 1 つ持つ」XLSX を作るサンプル。
+  // ここでの主眼は、図形 XML と worksheet/workbook の関係 XML の整合性。
   auto const converter = xlsdraw::units::EmuConverter{96.0}; // 標準DPI
   auto const emu_w = converter.pixels_to_emu(200).value_or(0);
   auto const emu_h = converter.pixels_to_emu(100).value_or(0);
@@ -41,21 +43,29 @@ int main() {
   };
 
   auto drawing_mgr = xlsdraw::drawing::DrawingManager{};
-  drawing_mgr.add_shape(std::move(my_shape));
+  // ID は DrawingManager 側で採番されるため、呼び出し側は 0 で初期化しておけばよい。
+  auto const add_result = drawing_mgr.add_shape(std::move(my_shape));
+  if (!add_result) {
+    std::cerr << "failed to add shape\n";
+    return 1;
+  }
 
   auto rel_manager = xlsdraw::resource::RelationshipManager{};
+  // worksheet -> drawing パーツを接続する r:id。
   auto const drawing_rid = rel_manager.add_relationship(
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing",
     "../drawings/drawing1.xml"
   );
 
   auto workbook_rel_manager = xlsdraw::resource::RelationshipManager{};
+  // workbook -> worksheet パーツを接続する r:id。
   auto const sheet_rel_id = workbook_rel_manager.add_relationship(
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet",
     "worksheets/sheet1.xml"
   );
 
   auto package_rel_manager = xlsdraw::resource::RelationshipManager{};
+  // パッケージルート -> workbook のエントリポイント。
   package_rel_manager.add_relationship(
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
     "xl/workbook.xml"
@@ -70,6 +80,7 @@ int main() {
     "</worksheet>", drawing_rid
   );
 
+  // Workbook 側はシート定義のみを持ち、実体 XML への解決は workbook.xml.rels 経由で行う。
   auto const workbook_xml = fmt::format(
     "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
     "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" "
@@ -80,6 +91,7 @@ int main() {
   );
 
   auto content_types_mgr = xlsdraw::resource::ContentTypesManager{};
+  // 追加したパーツ(workbook / worksheet / drawing)の型宣言を登録する。
   content_types_mgr.add_override(
     "xl/workbook.xml",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"
@@ -94,6 +106,7 @@ int main() {
   );
 
   auto writer = xlsdraw::io::ArchiveWriter("test07.xlsx");
+  // 必須パーツ一式を書き込む。1つでも欠けると Excel で修復対象になりやすい。
   auto const write_result = writer.write_files_detailed({
     {"[Content_Types].xml", content_types_mgr.generate_xml()},
     {"_rels/.rels", package_rel_manager.generate_xml()},
