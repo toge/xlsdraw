@@ -31,6 +31,9 @@ int main() {
     xlsdraw::drawing::PresetShape::FlowChartDocument,
     xlsdraw::drawing::PresetShape::FlowChartConnector,
     xlsdraw::drawing::PresetShape::FlowChartDisplay,
+    xlsdraw::drawing::PresetShape::CloudCallout,
+    xlsdraw::drawing::PresetShape::AccentCallout2,
+    xlsdraw::drawing::PresetShape::WedgeRoundRectCallout,
   };
 
   for (auto i = std::size_t{0}; i < presets.size(); ++i) {
@@ -63,6 +66,32 @@ int main() {
     };
 
     auto const added = builder.add_shape(std::move(shape));
+    if (!added) {
+      std::cerr << added.error() << '\n';
+      return 1;
+    }
+  }
+
+  auto const connectors = std::array{
+    xlsdraw::drawing::PresetShape::StraightConnector1,
+    xlsdraw::drawing::PresetShape::BentConnector2,
+    xlsdraw::drawing::PresetShape::CurvedConnector3,
+  };
+
+  for (auto i = std::size_t{0}; i < connectors.size(); ++i) {
+    auto const base_row = int32_t{10} + static_cast<int32_t>(i) * 2;
+
+    auto connector = xlsdraw::drawing::make_connector_shape(
+      connectors[i],
+      fmt::format("{}", xlsdraw::drawing::preset_shape_default_name(connectors[i]))
+    );
+    connector.from = {.col = 1, .col_off = 0, .row = base_row, .row_off = 0};
+    connector.to = {.col = 4, .col_off = emu_w / 2, .row = base_row + 1, .row_off = emu_h / 2};
+    connector.anchor = xlsdraw::drawing::AnchorType::MoveButNoSize;
+    connector.style.line.width_emu = 19050;
+    connector.style.line.color = xlsdraw::drawing::Color{"FFED7D31"};
+
+    auto const added = builder.add_shape(std::move(connector));
     if (!added) {
       std::cerr << added.error() << '\n';
       return 1;

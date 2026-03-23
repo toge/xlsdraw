@@ -1,6 +1,7 @@
 #ifndef A4D77870_EC77_4561_8506_FA189AD52F4A
 #define A4D77870_EC77_4561_8506_FA189AD52F4A
 
+#include <deque>
 #include <span>
 #include <expected>
 #include <string>
@@ -84,7 +85,7 @@ public:
 
 private:
   zip_t* za_{nullptr};
-  std::vector<std::string> owned_contents_{};
+  std::deque<std::string> owned_contents_{};
 };
 
 }  // namespace xlsdraw::io

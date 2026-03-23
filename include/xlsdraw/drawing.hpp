@@ -38,7 +38,9 @@ struct Marker {
 
 enum class AnchorType { MoveAndSize, MoveButNoSize, NoMoveNoSize };
 
-enum class ShapePresetFamily { Basic, BlockArrow, Flowchart };
+enum class ShapeRenderKind { Shape, Connector };
+
+enum class ShapePresetFamily { Basic, BlockArrow, Flowchart, Callout, Connector };
 
 enum class PresetShape {
   Rect,
@@ -73,6 +75,22 @@ enum class PresetShape {
   NotchedRightArrow,
   HomePlate,
   Chevron,
+  Callout1,
+  Callout2,
+  Callout3,
+  AccentCallout1,
+  AccentCallout2,
+  AccentCallout3,
+  BorderCallout1,
+  BorderCallout2,
+  BorderCallout3,
+  AccentBorderCallout1,
+  AccentBorderCallout2,
+  AccentBorderCallout3,
+  CloudCallout,
+  WedgeRectCallout,
+  WedgeRoundRectCallout,
+  WedgeEllipseCallout,
   FlowChartProcess,
   FlowChartDecision,
   FlowChartInputOutput,
@@ -98,6 +116,15 @@ enum class PresetShape {
   FlowChartMagneticDisk,
   FlowChartDirectAccessStorage,
   FlowChartDisplay,
+  StraightConnector1,
+  BentConnector2,
+  BentConnector3,
+  BentConnector4,
+  BentConnector5,
+  CurvedConnector2,
+  CurvedConnector3,
+  CurvedConnector4,
+  CurvedConnector5,
 };
 
 struct PresetShapeInfo {
@@ -105,68 +132,94 @@ struct PresetShapeInfo {
   std::string_view prst;
   std::string_view default_name;
   ShapePresetFamily family;
+  ShapeRenderKind render_kind;
 };
 
 // Phase 1 では、Excel で利用頻度の高い標準オートシェイプを
 // 基本図形・ブロック矢印・フローチャートの3 family で公開する。
 inline constexpr auto kSupportedPresetShapes = std::array{
-  PresetShapeInfo{PresetShape::Rect, "rect", "Rectangle", ShapePresetFamily::Basic},
-  PresetShapeInfo{PresetShape::RoundRect, "roundRect", "Rounded Rectangle", ShapePresetFamily::Basic},
-  PresetShapeInfo{PresetShape::Ellipse, "ellipse", "Ellipse", ShapePresetFamily::Basic},
-  PresetShapeInfo{PresetShape::Triangle, "triangle", "Triangle", ShapePresetFamily::Basic},
-  PresetShapeInfo{PresetShape::RtTriangle, "rtTriangle", "Right Triangle", ShapePresetFamily::Basic},
-  PresetShapeInfo{PresetShape::Diamond, "diamond", "Diamond", ShapePresetFamily::Basic},
-  PresetShapeInfo{PresetShape::Parallelogram, "parallelogram", "Parallelogram", ShapePresetFamily::Basic},
-  PresetShapeInfo{PresetShape::Trapezoid, "trapezoid", "Trapezoid", ShapePresetFamily::Basic},
-  PresetShapeInfo{PresetShape::Hexagon, "hexagon", "Hexagon", ShapePresetFamily::Basic},
-  PresetShapeInfo{PresetShape::Octagon, "octagon", "Octagon", ShapePresetFamily::Basic},
-  PresetShapeInfo{PresetShape::Plus, "plus", "Plus", ShapePresetFamily::Basic},
-  PresetShapeInfo{PresetShape::Can, "can", "Can", ShapePresetFamily::Basic},
-  PresetShapeInfo{PresetShape::Cube, "cube", "Cube", ShapePresetFamily::Basic},
-  PresetShapeInfo{PresetShape::Bevel, "bevel", "Bevel", ShapePresetFamily::Basic},
-  PresetShapeInfo{PresetShape::Donut, "donut", "Donut", ShapePresetFamily::Basic},
-  PresetShapeInfo{PresetShape::NoSmoking, "noSmoking", "No Smoking", ShapePresetFamily::Basic},
-  PresetShapeInfo{PresetShape::LeftArrow, "leftArrow", "Left Arrow", ShapePresetFamily::BlockArrow},
-  PresetShapeInfo{PresetShape::RightArrow, "rightArrow", "Right Arrow", ShapePresetFamily::BlockArrow},
-  PresetShapeInfo{PresetShape::UpArrow, "upArrow", "Up Arrow", ShapePresetFamily::BlockArrow},
-  PresetShapeInfo{PresetShape::DownArrow, "downArrow", "Down Arrow", ShapePresetFamily::BlockArrow},
-  PresetShapeInfo{PresetShape::LeftRightArrow, "leftRightArrow", "Left Right Arrow", ShapePresetFamily::BlockArrow},
-  PresetShapeInfo{PresetShape::UpDownArrow, "upDownArrow", "Up Down Arrow", ShapePresetFamily::BlockArrow},
-  PresetShapeInfo{PresetShape::QuadArrow, "quadArrow", "Quad Arrow", ShapePresetFamily::BlockArrow},
-  PresetShapeInfo{PresetShape::LeftRightUpArrow, "leftRightUpArrow", "Left Right Up Arrow", ShapePresetFamily::BlockArrow},
-  PresetShapeInfo{PresetShape::BentArrow, "bentArrow", "Bent Arrow", ShapePresetFamily::BlockArrow},
-  PresetShapeInfo{PresetShape::UturnArrow, "uturnArrow", "U-Turn Arrow", ShapePresetFamily::BlockArrow},
-  PresetShapeInfo{PresetShape::LeftUpArrow, "leftUpArrow", "Left Up Arrow", ShapePresetFamily::BlockArrow},
-  PresetShapeInfo{PresetShape::BentUpArrow, "bentUpArrow", "Bent Up Arrow", ShapePresetFamily::BlockArrow},
-  PresetShapeInfo{PresetShape::StripedRightArrow, "stripedRightArrow", "Striped Right Arrow", ShapePresetFamily::BlockArrow},
-  PresetShapeInfo{PresetShape::NotchedRightArrow, "notchedRightArrow", "Notched Right Arrow", ShapePresetFamily::BlockArrow},
-  PresetShapeInfo{PresetShape::HomePlate, "homePlate", "Home Plate", ShapePresetFamily::BlockArrow},
-  PresetShapeInfo{PresetShape::Chevron, "chevron", "Chevron", ShapePresetFamily::BlockArrow},
-  PresetShapeInfo{PresetShape::FlowChartProcess, "flowChartProcess", "Process", ShapePresetFamily::Flowchart},
-  PresetShapeInfo{PresetShape::FlowChartDecision, "flowChartDecision", "Decision", ShapePresetFamily::Flowchart},
-  PresetShapeInfo{PresetShape::FlowChartInputOutput, "flowChartInputOutput", "Input Output", ShapePresetFamily::Flowchart},
-  PresetShapeInfo{PresetShape::FlowChartPredefinedProcess, "flowChartPredefinedProcess", "Predefined Process", ShapePresetFamily::Flowchart},
-  PresetShapeInfo{PresetShape::FlowChartInternalStorage, "flowChartInternalStorage", "Internal Storage", ShapePresetFamily::Flowchart},
-  PresetShapeInfo{PresetShape::FlowChartDocument, "flowChartDocument", "Document", ShapePresetFamily::Flowchart},
-  PresetShapeInfo{PresetShape::FlowChartTerminator, "flowChartTerminator", "Terminator", ShapePresetFamily::Flowchart},
-  PresetShapeInfo{PresetShape::FlowChartPreparation, "flowChartPreparation", "Preparation", ShapePresetFamily::Flowchart},
-  PresetShapeInfo{PresetShape::FlowChartManualInput, "flowChartManualInput", "Manual Input", ShapePresetFamily::Flowchart},
-  PresetShapeInfo{PresetShape::FlowChartManualOperation, "flowChartManualOperation", "Manual Operation", ShapePresetFamily::Flowchart},
-  PresetShapeInfo{PresetShape::FlowChartConnector, "flowChartConnector", "Connector", ShapePresetFamily::Flowchart},
-  PresetShapeInfo{PresetShape::FlowChartOffpageConnector, "flowChartOffpageConnector", "Offpage Connector", ShapePresetFamily::Flowchart},
-  PresetShapeInfo{PresetShape::FlowChartPunchedCard, "flowChartPunchedCard", "Punched Card", ShapePresetFamily::Flowchart},
-  PresetShapeInfo{PresetShape::FlowChartPunchedTape, "flowChartPunchedTape", "Punched Tape", ShapePresetFamily::Flowchart},
-  PresetShapeInfo{PresetShape::FlowChartSummingJunction, "flowChartSummingJunction", "Summing Junction", ShapePresetFamily::Flowchart},
-  PresetShapeInfo{PresetShape::FlowChartOr, "flowChartOr", "Or", ShapePresetFamily::Flowchart},
-  PresetShapeInfo{PresetShape::FlowChartCollate, "flowChartCollate", "Collate", ShapePresetFamily::Flowchart},
-  PresetShapeInfo{PresetShape::FlowChartSort, "flowChartSort", "Sort", ShapePresetFamily::Flowchart},
-  PresetShapeInfo{PresetShape::FlowChartExtract, "flowChartExtract", "Extract", ShapePresetFamily::Flowchart},
-  PresetShapeInfo{PresetShape::FlowChartMerge, "flowChartMerge", "Merge", ShapePresetFamily::Flowchart},
-  PresetShapeInfo{PresetShape::FlowChartStoredData, "flowChartStoredData", "Stored Data", ShapePresetFamily::Flowchart},
-  PresetShapeInfo{PresetShape::FlowChartDelay, "flowChartDelay", "Delay", ShapePresetFamily::Flowchart},
-  PresetShapeInfo{PresetShape::FlowChartMagneticDisk, "flowChartMagneticDisk", "Magnetic Disk", ShapePresetFamily::Flowchart},
-  PresetShapeInfo{PresetShape::FlowChartDirectAccessStorage, "flowChartDirectAccessStorage", "Direct Access Storage", ShapePresetFamily::Flowchart},
-  PresetShapeInfo{PresetShape::FlowChartDisplay, "flowChartDisplay", "Display", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::Rect, "rect", "Rectangle", ShapePresetFamily::Basic, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::RoundRect, "roundRect", "Rounded Rectangle", ShapePresetFamily::Basic, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::Ellipse, "ellipse", "Ellipse", ShapePresetFamily::Basic, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::Triangle, "triangle", "Triangle", ShapePresetFamily::Basic, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::RtTriangle, "rtTriangle", "Right Triangle", ShapePresetFamily::Basic, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::Diamond, "diamond", "Diamond", ShapePresetFamily::Basic, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::Parallelogram, "parallelogram", "Parallelogram", ShapePresetFamily::Basic, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::Trapezoid, "trapezoid", "Trapezoid", ShapePresetFamily::Basic, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::Hexagon, "hexagon", "Hexagon", ShapePresetFamily::Basic, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::Octagon, "octagon", "Octagon", ShapePresetFamily::Basic, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::Plus, "plus", "Plus", ShapePresetFamily::Basic, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::Can, "can", "Can", ShapePresetFamily::Basic, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::Cube, "cube", "Cube", ShapePresetFamily::Basic, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::Bevel, "bevel", "Bevel", ShapePresetFamily::Basic, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::Donut, "donut", "Donut", ShapePresetFamily::Basic, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::NoSmoking, "noSmoking", "No Smoking", ShapePresetFamily::Basic, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::LeftArrow, "leftArrow", "Left Arrow", ShapePresetFamily::BlockArrow, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::RightArrow, "rightArrow", "Right Arrow", ShapePresetFamily::BlockArrow, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::UpArrow, "upArrow", "Up Arrow", ShapePresetFamily::BlockArrow, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::DownArrow, "downArrow", "Down Arrow", ShapePresetFamily::BlockArrow, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::LeftRightArrow, "leftRightArrow", "Left Right Arrow", ShapePresetFamily::BlockArrow, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::UpDownArrow, "upDownArrow", "Up Down Arrow", ShapePresetFamily::BlockArrow, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::QuadArrow, "quadArrow", "Quad Arrow", ShapePresetFamily::BlockArrow, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::LeftRightUpArrow, "leftRightUpArrow", "Left Right Up Arrow", ShapePresetFamily::BlockArrow, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::BentArrow, "bentArrow", "Bent Arrow", ShapePresetFamily::BlockArrow, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::UturnArrow, "uturnArrow", "U-Turn Arrow", ShapePresetFamily::BlockArrow, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::LeftUpArrow, "leftUpArrow", "Left Up Arrow", ShapePresetFamily::BlockArrow, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::BentUpArrow, "bentUpArrow", "Bent Up Arrow", ShapePresetFamily::BlockArrow, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::StripedRightArrow, "stripedRightArrow", "Striped Right Arrow", ShapePresetFamily::BlockArrow, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::NotchedRightArrow, "notchedRightArrow", "Notched Right Arrow", ShapePresetFamily::BlockArrow, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::HomePlate, "homePlate", "Home Plate", ShapePresetFamily::BlockArrow, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::Chevron, "chevron", "Chevron", ShapePresetFamily::BlockArrow, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::Callout1, "callout1", "Callout 1", ShapePresetFamily::Callout, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::Callout2, "callout2", "Callout 2", ShapePresetFamily::Callout, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::Callout3, "callout3", "Callout 3", ShapePresetFamily::Callout, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::AccentCallout1, "accentCallout1", "Accent Callout 1", ShapePresetFamily::Callout, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::AccentCallout2, "accentCallout2", "Accent Callout 2", ShapePresetFamily::Callout, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::AccentCallout3, "accentCallout3", "Accent Callout 3", ShapePresetFamily::Callout, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::BorderCallout1, "borderCallout1", "Border Callout 1", ShapePresetFamily::Callout, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::BorderCallout2, "borderCallout2", "Border Callout 2", ShapePresetFamily::Callout, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::BorderCallout3, "borderCallout3", "Border Callout 3", ShapePresetFamily::Callout, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::AccentBorderCallout1, "accentBorderCallout1", "Accent Border Callout 1", ShapePresetFamily::Callout, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::AccentBorderCallout2, "accentBorderCallout2", "Accent Border Callout 2", ShapePresetFamily::Callout, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::AccentBorderCallout3, "accentBorderCallout3", "Accent Border Callout 3", ShapePresetFamily::Callout, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::CloudCallout, "cloudCallout", "Cloud Callout", ShapePresetFamily::Callout, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::WedgeRectCallout, "wedgeRectCallout", "Wedge Rect Callout", ShapePresetFamily::Callout, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::WedgeRoundRectCallout, "wedgeRoundRectCallout", "Wedge Round Rect Callout", ShapePresetFamily::Callout, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::WedgeEllipseCallout, "wedgeEllipseCallout", "Wedge Ellipse Callout", ShapePresetFamily::Callout, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartProcess, "flowChartProcess", "Process", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartDecision, "flowChartDecision", "Decision", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartInputOutput, "flowChartInputOutput", "Input Output", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartPredefinedProcess, "flowChartPredefinedProcess", "Predefined Process", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartInternalStorage, "flowChartInternalStorage", "Internal Storage", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartDocument, "flowChartDocument", "Document", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartTerminator, "flowChartTerminator", "Terminator", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartPreparation, "flowChartPreparation", "Preparation", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartManualInput, "flowChartManualInput", "Manual Input", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartManualOperation, "flowChartManualOperation", "Manual Operation", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartConnector, "flowChartConnector", "Connector", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartOffpageConnector, "flowChartOffpageConnector", "Offpage Connector", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartPunchedCard, "flowChartPunchedCard", "Punched Card", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartPunchedTape, "flowChartPunchedTape", "Punched Tape", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartSummingJunction, "flowChartSummingJunction", "Summing Junction", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartOr, "flowChartOr", "Or", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartCollate, "flowChartCollate", "Collate", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartSort, "flowChartSort", "Sort", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartExtract, "flowChartExtract", "Extract", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartMerge, "flowChartMerge", "Merge", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartStoredData, "flowChartStoredData", "Stored Data", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartDelay, "flowChartDelay", "Delay", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartMagneticDisk, "flowChartMagneticDisk", "Magnetic Disk", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartDirectAccessStorage, "flowChartDirectAccessStorage", "Direct Access Storage", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::FlowChartDisplay, "flowChartDisplay", "Display", ShapePresetFamily::Flowchart, ShapeRenderKind::Shape},
+  PresetShapeInfo{PresetShape::StraightConnector1, "straightConnector1", "Straight Connector", ShapePresetFamily::Connector, ShapeRenderKind::Connector},
+  PresetShapeInfo{PresetShape::BentConnector2, "bentConnector2", "Bent Connector 2", ShapePresetFamily::Connector, ShapeRenderKind::Connector},
+  PresetShapeInfo{PresetShape::BentConnector3, "bentConnector3", "Bent Connector 3", ShapePresetFamily::Connector, ShapeRenderKind::Connector},
+  PresetShapeInfo{PresetShape::BentConnector4, "bentConnector4", "Bent Connector 4", ShapePresetFamily::Connector, ShapeRenderKind::Connector},
+  PresetShapeInfo{PresetShape::BentConnector5, "bentConnector5", "Bent Connector 5", ShapePresetFamily::Connector, ShapeRenderKind::Connector},
+  PresetShapeInfo{PresetShape::CurvedConnector2, "curvedConnector2", "Curved Connector 2", ShapePresetFamily::Connector, ShapeRenderKind::Connector},
+  PresetShapeInfo{PresetShape::CurvedConnector3, "curvedConnector3", "Curved Connector 3", ShapePresetFamily::Connector, ShapeRenderKind::Connector},
+  PresetShapeInfo{PresetShape::CurvedConnector4, "curvedConnector4", "Curved Connector 4", ShapePresetFamily::Connector, ShapeRenderKind::Connector},
+  PresetShapeInfo{PresetShape::CurvedConnector5, "curvedConnector5", "Curved Connector 5", ShapePresetFamily::Connector, ShapeRenderKind::Connector},
 };
 
 [[nodiscard]]
@@ -197,6 +250,11 @@ inline auto preset_shape_default_name(PresetShape preset) noexcept -> std::strin
 [[nodiscard]]
 inline auto preset_shape_family(PresetShape preset) noexcept -> ShapePresetFamily {
   return preset_shape_info(preset).family;
+}
+
+[[nodiscard]]
+inline auto preset_shape_render_kind(PresetShape preset) noexcept -> ShapeRenderKind {
+  return preset_shape_info(preset).render_kind;
 }
 
 struct Image {
@@ -304,6 +362,7 @@ struct Shape {
   std::string name;
   std::string type;
   std::optional<PresetShape> preset_shape;
+  std::optional<ShapeRenderKind> render_kind;
   Marker from, to;
   std::string color_argb{"FF4472C4"};
   std::string text;
@@ -316,8 +375,16 @@ struct Shape {
 inline auto make_preset_shape(PresetShape preset, std::string name = {}) -> Shape {
   auto shape = Shape{};
   shape.preset_shape = preset;
+  shape.render_kind = preset_shape_render_kind(preset);
   shape.type = std::string(preset_shape_prst(preset));
   shape.name = name.empty() ? std::string(preset_shape_default_name(preset)) : std::move(name);
+  return shape;
+}
+
+[[nodiscard]]
+inline auto make_connector_shape(PresetShape preset, std::string name = {}) -> Shape {
+  auto shape = make_preset_shape(preset, std::move(name));
+  shape.render_kind = ShapeRenderKind::Connector;
   return shape;
 }
 
@@ -327,6 +394,17 @@ inline auto shape_geometry_prst(Shape const& shape) noexcept -> std::string_view
     return preset_shape_prst(*shape.preset_shape);
   }
   return shape.type;
+}
+
+[[nodiscard]]
+inline auto shape_render_kind(Shape const& shape) noexcept -> ShapeRenderKind {
+  if (shape.render_kind) {
+    return *shape.render_kind;
+  }
+  if (shape.preset_shape) {
+    return preset_shape_render_kind(*shape.preset_shape);
+  }
+  return ShapeRenderKind::Shape;
 }
 
 struct CellOffset {
@@ -381,6 +459,21 @@ public:
   }
 
 private:
+  static auto default_tx_body_xml() -> std::string {
+    return "<xdr:txBody><a:bodyPr/><a:lstStyle/><a:p/></xdr:txBody>";
+  }
+
+  auto generate_style_xml() const -> std::string {
+    return std::string{
+      "<xdr:style>"
+        "<a:lnRef idx=\"2\"><a:schemeClr val=\"accent1\"/></a:lnRef>"
+        "<a:fillRef idx=\"1\"><a:schemeClr val=\"accent1\"/></a:fillRef>"
+        "<a:effectRef idx=\"0\"><a:schemeClr val=\"accent1\"/></a:effectRef>"
+        "<a:fontRef idx=\"minor\"><a:schemeClr val=\"lt1\"/></a:fontRef>"
+      "</xdr:style>"
+    };
+  }
+
   auto generate_spPr(Shape const& shape) const {
     return fmt::format(
       "<xdr:spPr>"
@@ -397,10 +490,10 @@ private:
     );
   }
 
-  auto generate_anchor(Shape const& shape) const -> std::string {
+  auto generate_shape_anchor(Shape const& shape) const -> std::string {
     auto const tx_body_xml = shape.text_body
           ? shape.text_body->generate_xml()
-          : "<xdr:txBody><a:bodyPr/><a:lstStyle/><a:p/></xdr:txBody>";
+          : default_tx_body_xml();
 
     return fmt::format(
       "<xdr:twoCellAnchor editAs=\"oneCell\">"
@@ -411,13 +504,8 @@ private:
             "<xdr:cNvSpPr/>"
           "</xdr:nvSpPr>"
           "{4}" // spPr (スタイル適用)
-          "<xdr:style>" // 文字列などの簡易スタイル
-            "<a:lnRef idx=\"2\"><a:schemeClr val=\"accent1\"/></a:lnRef>"
-            "<a:fillRef idx=\"1\"><a:schemeClr val=\"accent1\"/></a:fillRef>"
-            "<a:effectRef idx=\"0\"><a:schemeClr val=\"accent1\"/></a:effectRef>"
-            "<a:fontRef idx=\"minor\"><a:schemeClr val=\"lt1\"/></a:fontRef>"
-          "</xdr:style>"
-          "{5}" // txBody
+          "{5}" // style
+          "{6}" // txBody
         "</xdr:sp>"
         "<xdr:clientData/>"
       "</xdr:twoCellAnchor>",
@@ -426,8 +514,45 @@ private:
       shape.id,
       shape.name,
       generate_spPr(shape),
+      generate_style_xml(),
       tx_body_xml
     );
+  }
+
+  auto generate_connector_anchor(Shape const& shape) const -> std::string {
+    auto const tx_body_xml = shape.text_body
+          ? shape.text_body->generate_xml()
+          : std::string{};
+
+    return fmt::format(
+      "<xdr:twoCellAnchor editAs=\"oneCell\">"
+        "{0}{1}" // from, to
+        "<xdr:cxnSp>"
+          "<xdr:nvCxnSpPr>"
+            "<xdr:cNvPr id=\"{2}\" name=\"{3} {2}\"/>"
+            "<xdr:cNvCxnSpPr/>"
+          "</xdr:nvCxnSpPr>"
+          "{4}" // spPr
+          "{5}" // style
+          "{6}" // optional txBody
+        "</xdr:cxnSp>"
+        "<xdr:clientData/>"
+      "</xdr:twoCellAnchor>",
+      shape.from.to_xml("xdr:from"),
+      shape.to.to_xml("xdr:to"),
+      shape.id,
+      shape.name,
+      generate_spPr(shape),
+      generate_style_xml(),
+      tx_body_xml
+    );
+  }
+
+  auto generate_anchor(Shape const& shape) const -> std::string {
+    if (shape_render_kind(shape) == ShapeRenderKind::Connector) {
+      return generate_connector_anchor(shape);
+    }
+    return generate_shape_anchor(shape);
   }
 
   // XMLヘッダー（名前空間定義）
