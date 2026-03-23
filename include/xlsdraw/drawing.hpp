@@ -1,10 +1,15 @@
 #ifndef C888F150_6E10_4925_AE14_FCD9ECF976BA
 #define C888F150_6E10_4925_AE14_FCD9ECF976BA
 
-#include <string>
-#include <vector>
-#include <optional>
+#include <algorithm>
+#include <array>
 #include <cstdint>
+#include <optional>
+#include <span>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 #include "fmt/core.h"
 
@@ -32,6 +37,167 @@ struct Marker {
 };
 
 enum class AnchorType { MoveAndSize, MoveButNoSize, NoMoveNoSize };
+
+enum class ShapePresetFamily { Basic, BlockArrow, Flowchart };
+
+enum class PresetShape {
+  Rect,
+  RoundRect,
+  Ellipse,
+  Triangle,
+  RtTriangle,
+  Diamond,
+  Parallelogram,
+  Trapezoid,
+  Hexagon,
+  Octagon,
+  Plus,
+  Can,
+  Cube,
+  Bevel,
+  Donut,
+  NoSmoking,
+  LeftArrow,
+  RightArrow,
+  UpArrow,
+  DownArrow,
+  LeftRightArrow,
+  UpDownArrow,
+  QuadArrow,
+  LeftRightUpArrow,
+  BentArrow,
+  UturnArrow,
+  LeftUpArrow,
+  BentUpArrow,
+  StripedRightArrow,
+  NotchedRightArrow,
+  HomePlate,
+  Chevron,
+  FlowChartProcess,
+  FlowChartDecision,
+  FlowChartInputOutput,
+  FlowChartPredefinedProcess,
+  FlowChartInternalStorage,
+  FlowChartDocument,
+  FlowChartTerminator,
+  FlowChartPreparation,
+  FlowChartManualInput,
+  FlowChartManualOperation,
+  FlowChartConnector,
+  FlowChartOffpageConnector,
+  FlowChartPunchedCard,
+  FlowChartPunchedTape,
+  FlowChartSummingJunction,
+  FlowChartOr,
+  FlowChartCollate,
+  FlowChartSort,
+  FlowChartExtract,
+  FlowChartMerge,
+  FlowChartStoredData,
+  FlowChartDelay,
+  FlowChartMagneticDisk,
+  FlowChartDirectAccessStorage,
+  FlowChartDisplay,
+};
+
+struct PresetShapeInfo {
+  PresetShape preset;
+  std::string_view prst;
+  std::string_view default_name;
+  ShapePresetFamily family;
+};
+
+// Phase 1 では、Excel で利用頻度の高い標準オートシェイプを
+// 基本図形・ブロック矢印・フローチャートの3 family で公開する。
+inline constexpr auto kSupportedPresetShapes = std::array{
+  PresetShapeInfo{PresetShape::Rect, "rect", "Rectangle", ShapePresetFamily::Basic},
+  PresetShapeInfo{PresetShape::RoundRect, "roundRect", "Rounded Rectangle", ShapePresetFamily::Basic},
+  PresetShapeInfo{PresetShape::Ellipse, "ellipse", "Ellipse", ShapePresetFamily::Basic},
+  PresetShapeInfo{PresetShape::Triangle, "triangle", "Triangle", ShapePresetFamily::Basic},
+  PresetShapeInfo{PresetShape::RtTriangle, "rtTriangle", "Right Triangle", ShapePresetFamily::Basic},
+  PresetShapeInfo{PresetShape::Diamond, "diamond", "Diamond", ShapePresetFamily::Basic},
+  PresetShapeInfo{PresetShape::Parallelogram, "parallelogram", "Parallelogram", ShapePresetFamily::Basic},
+  PresetShapeInfo{PresetShape::Trapezoid, "trapezoid", "Trapezoid", ShapePresetFamily::Basic},
+  PresetShapeInfo{PresetShape::Hexagon, "hexagon", "Hexagon", ShapePresetFamily::Basic},
+  PresetShapeInfo{PresetShape::Octagon, "octagon", "Octagon", ShapePresetFamily::Basic},
+  PresetShapeInfo{PresetShape::Plus, "plus", "Plus", ShapePresetFamily::Basic},
+  PresetShapeInfo{PresetShape::Can, "can", "Can", ShapePresetFamily::Basic},
+  PresetShapeInfo{PresetShape::Cube, "cube", "Cube", ShapePresetFamily::Basic},
+  PresetShapeInfo{PresetShape::Bevel, "bevel", "Bevel", ShapePresetFamily::Basic},
+  PresetShapeInfo{PresetShape::Donut, "donut", "Donut", ShapePresetFamily::Basic},
+  PresetShapeInfo{PresetShape::NoSmoking, "noSmoking", "No Smoking", ShapePresetFamily::Basic},
+  PresetShapeInfo{PresetShape::LeftArrow, "leftArrow", "Left Arrow", ShapePresetFamily::BlockArrow},
+  PresetShapeInfo{PresetShape::RightArrow, "rightArrow", "Right Arrow", ShapePresetFamily::BlockArrow},
+  PresetShapeInfo{PresetShape::UpArrow, "upArrow", "Up Arrow", ShapePresetFamily::BlockArrow},
+  PresetShapeInfo{PresetShape::DownArrow, "downArrow", "Down Arrow", ShapePresetFamily::BlockArrow},
+  PresetShapeInfo{PresetShape::LeftRightArrow, "leftRightArrow", "Left Right Arrow", ShapePresetFamily::BlockArrow},
+  PresetShapeInfo{PresetShape::UpDownArrow, "upDownArrow", "Up Down Arrow", ShapePresetFamily::BlockArrow},
+  PresetShapeInfo{PresetShape::QuadArrow, "quadArrow", "Quad Arrow", ShapePresetFamily::BlockArrow},
+  PresetShapeInfo{PresetShape::LeftRightUpArrow, "leftRightUpArrow", "Left Right Up Arrow", ShapePresetFamily::BlockArrow},
+  PresetShapeInfo{PresetShape::BentArrow, "bentArrow", "Bent Arrow", ShapePresetFamily::BlockArrow},
+  PresetShapeInfo{PresetShape::UturnArrow, "uturnArrow", "U-Turn Arrow", ShapePresetFamily::BlockArrow},
+  PresetShapeInfo{PresetShape::LeftUpArrow, "leftUpArrow", "Left Up Arrow", ShapePresetFamily::BlockArrow},
+  PresetShapeInfo{PresetShape::BentUpArrow, "bentUpArrow", "Bent Up Arrow", ShapePresetFamily::BlockArrow},
+  PresetShapeInfo{PresetShape::StripedRightArrow, "stripedRightArrow", "Striped Right Arrow", ShapePresetFamily::BlockArrow},
+  PresetShapeInfo{PresetShape::NotchedRightArrow, "notchedRightArrow", "Notched Right Arrow", ShapePresetFamily::BlockArrow},
+  PresetShapeInfo{PresetShape::HomePlate, "homePlate", "Home Plate", ShapePresetFamily::BlockArrow},
+  PresetShapeInfo{PresetShape::Chevron, "chevron", "Chevron", ShapePresetFamily::BlockArrow},
+  PresetShapeInfo{PresetShape::FlowChartProcess, "flowChartProcess", "Process", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::FlowChartDecision, "flowChartDecision", "Decision", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::FlowChartInputOutput, "flowChartInputOutput", "Input Output", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::FlowChartPredefinedProcess, "flowChartPredefinedProcess", "Predefined Process", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::FlowChartInternalStorage, "flowChartInternalStorage", "Internal Storage", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::FlowChartDocument, "flowChartDocument", "Document", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::FlowChartTerminator, "flowChartTerminator", "Terminator", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::FlowChartPreparation, "flowChartPreparation", "Preparation", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::FlowChartManualInput, "flowChartManualInput", "Manual Input", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::FlowChartManualOperation, "flowChartManualOperation", "Manual Operation", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::FlowChartConnector, "flowChartConnector", "Connector", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::FlowChartOffpageConnector, "flowChartOffpageConnector", "Offpage Connector", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::FlowChartPunchedCard, "flowChartPunchedCard", "Punched Card", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::FlowChartPunchedTape, "flowChartPunchedTape", "Punched Tape", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::FlowChartSummingJunction, "flowChartSummingJunction", "Summing Junction", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::FlowChartOr, "flowChartOr", "Or", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::FlowChartCollate, "flowChartCollate", "Collate", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::FlowChartSort, "flowChartSort", "Sort", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::FlowChartExtract, "flowChartExtract", "Extract", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::FlowChartMerge, "flowChartMerge", "Merge", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::FlowChartStoredData, "flowChartStoredData", "Stored Data", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::FlowChartDelay, "flowChartDelay", "Delay", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::FlowChartMagneticDisk, "flowChartMagneticDisk", "Magnetic Disk", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::FlowChartDirectAccessStorage, "flowChartDirectAccessStorage", "Direct Access Storage", ShapePresetFamily::Flowchart},
+  PresetShapeInfo{PresetShape::FlowChartDisplay, "flowChartDisplay", "Display", ShapePresetFamily::Flowchart},
+};
+
+[[nodiscard]]
+inline auto supported_preset_shapes() noexcept -> std::span<PresetShapeInfo const> {
+  return kSupportedPresetShapes;
+}
+
+[[nodiscard]]
+inline auto preset_shape_info(PresetShape preset) noexcept -> PresetShapeInfo const& {
+  auto const it = std::find_if(
+    kSupportedPresetShapes.begin(),
+    kSupportedPresetShapes.end(),
+    [preset](PresetShapeInfo const& info) { return info.preset == preset; }
+  );
+  return (it != kSupportedPresetShapes.end()) ? *it : kSupportedPresetShapes.front();
+}
+
+[[nodiscard]]
+inline auto preset_shape_prst(PresetShape preset) noexcept -> std::string_view {
+  return preset_shape_info(preset).prst;
+}
+
+[[nodiscard]]
+inline auto preset_shape_default_name(PresetShape preset) noexcept -> std::string_view {
+  return preset_shape_info(preset).default_name;
+}
+
+[[nodiscard]]
+inline auto preset_shape_family(PresetShape preset) noexcept -> ShapePresetFamily {
+  return preset_shape_info(preset).family;
+}
 
 struct Image {
   uint32_t id;
@@ -137,6 +303,7 @@ struct Shape {
   uint32_t id;
   std::string name;
   std::string type;
+  std::optional<PresetShape> preset_shape;
   Marker from, to;
   std::string color_argb{"FF4472C4"};
   std::string text;
@@ -144,6 +311,23 @@ struct Shape {
   ShapeStyle style;
   std::optional<TextBody> text_body; // 追加
 };
+
+[[nodiscard]]
+inline auto make_preset_shape(PresetShape preset, std::string name = {}) -> Shape {
+  auto shape = Shape{};
+  shape.preset_shape = preset;
+  shape.type = std::string(preset_shape_prst(preset));
+  shape.name = name.empty() ? std::string(preset_shape_default_name(preset)) : std::move(name);
+  return shape;
+}
+
+[[nodiscard]]
+inline auto shape_geometry_prst(Shape const& shape) noexcept -> std::string_view {
+  if (shape.preset_shape) {
+    return preset_shape_prst(*shape.preset_shape);
+  }
+  return shape.type;
+}
 
 struct CellOffset {
   int32_t col;
@@ -207,7 +391,7 @@ private:
         "{1}" // Fill
         "{2}" // Line
       "</xdr:spPr>",
-      shape.type,
+      shape_geometry_prst(shape),
       shape.style.fill.generate_xml(),
       shape.style.line.generate_xml()
     );
@@ -233,9 +417,7 @@ private:
             "<a:effectRef idx=\"0\"><a:schemeClr val=\"accent1\"/></a:effectRef>"
             "<a:fontRef idx=\"minor\"><a:schemeClr val=\"lt1\"/></a:fontRef>"
           "</xdr:style>"
-          "<xdr:txBody>" // テキストボックスが必要な場合
-             "<a:bodyPr/><a:lstStyle/><a:p><a:endParaRPr lang=\"ja-JP\"/></a:p>"
-          "</xdr:txBody>"
+          "{5}" // txBody
         "</xdr:sp>"
         "<xdr:clientData/>"
       "</xdr:twoCellAnchor>",
@@ -259,7 +441,7 @@ private:
 class DrawingManager {
 public:
   // 図形追加時のエラー定義
-  enum class Error { InvalidPosition, DuplicateId };
+  enum class Error { InvalidPosition, InvalidGeometry, DuplicateId };
 
   explicit
   DrawingManager(uint32_t start_id = 1)
@@ -274,6 +456,10 @@ public:
   auto add_shape(Shape shape) -> std::expected<uint32_t, Error> {
     // IDの自動採番
     shape.id = next_id_++;
+
+    if (shape_geometry_prst(shape).empty()) {
+      return std::unexpected(Error::InvalidGeometry);
+    }
 
     // 簡易的なバリデーション: 終了セルが開始セルより前でないか
     if (shape.to.col < shape.from.col || shape.to.row < shape.from.row) {
@@ -314,6 +500,19 @@ private:
   uint32_t next_id_;
   std::vector<Shape> shapes_;
 };
+
+[[nodiscard]]
+inline auto drawing_manager_error_message(DrawingManager::Error error) noexcept -> std::string_view {
+  switch (error) {
+    case DrawingManager::Error::InvalidPosition:
+      return "invalid shape position";
+    case DrawingManager::Error::InvalidGeometry:
+      return "shape geometry is not set";
+    case DrawingManager::Error::DuplicateId:
+      return "duplicate shape id";
+  }
+  return "unknown drawing manager error";
+}
 
 
 }

@@ -24,13 +24,10 @@ public:
     auto const emu_w = converter_.pixels_to_emu(width_px).value_or(0);
     auto const emu_h = converter_.pixels_to_emu(height_px).value_or(0);
 
-    Shape rect{
-      .name = "Rectangle",
-      .type = "rect",
-      .from = {.col = col, .col_off = 0, .row = row, .row_off = 0},
-      // 簡易的に同一セル内、またはオフセットでサイズを表現
-      .to = {.col = col, .col_off = emu_w, .row = row, .row_off = emu_h}
-    };
+    auto rect = make_preset_shape(PresetShape::Rect, "Rectangle");
+    rect.from = {.col = col, .col_off = 0, .row = row, .row_off = 0};
+    // 簡易的に同一セル内、またはオフセットでサイズを表現
+    rect.to = {.col = col, .col_off = emu_w, .row = row, .row_off = emu_h};
 
     if (!text.empty()) {
       TextRun run{.text = std::string(text)};
