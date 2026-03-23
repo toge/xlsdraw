@@ -1,60 +1,73 @@
 #include <iostream>
 
-#include "xlsdraw/resource.hpp"
+#include "fmt/core.h"
+
+#include "xlsdraw/units.hpp"
 #include "xlsdraw/drawing.hpp"
 #include "xlsdraw/io.hpp"
-
-using namespace xlsdraw;
+#include "xlsdraw/resource.hpp"
 
 int main() {
-  // 1. リレーションの準備
-  auto sheet_rel_manager = resource::RelationshipManager{};
-  auto const drawing_rel_id = sheet_rel_manager.add_relationship(
+  auto const converter = xlsdraw::units::EmuConverter{96.0}; // 標準DPI
+  auto const emu_w = converter.pixels_to_emu(200).value_or(0);
+  auto const emu_h = converter.pixels_to_emu(100).value_or(0);
+
+  auto my_shape = xlsdraw::drawing::Shape{
+    .id = 0,
+    .name = "MyBlueRect",
+    .type = "rect",
+    .from = {.col = 1, .col_off = 0, .row = 1, .row_off = 0}, // B2
+    .to = {.col = 1, .col_off = emu_w, .row = 1, .row_off = emu_h}, // 同一セル内でサイズを表現
+    .color_argb = "FF4472C4",
+    .text = "",
+    .anchor = xlsdraw::drawing::AnchorType::MoveButNoSize,
+    .style = {
+      .fill = {
+        .solid_fill = xlsdraw::drawing::Color{"FF4F81BD"},
+      },
+      .line = {
+        .width_emu = 12700, // 約1pt
+        .color = xlsdraw::drawing::Color{"FF1F497D"},
+      },
+    },
+    .text_body = xlsdraw::drawing::TextBody{
+      .paragraphs = {
+        {
+          .runs = {{.text = "Hello C++26", .color = xlsdraw::drawing::Color{"FFFF0000"}, .font_size = 14.0,}},
+          .alignment = "ctr",
+        } // 赤文字
+      }
+    },
+  };
+
+  auto drawing_mgr = xlsdraw::drawing::DrawingManager{};
+  drawing_mgr.add_shape(std::move(my_shape));
+
+  auto rel_manager = xlsdraw::resource::RelationshipManager{};
+  auto const drawing_rid = rel_manager.add_relationship(
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing",
     "../drawings/drawing1.xml"
   );
 
-  auto workbook_rel_manager = resource::RelationshipManager{};
+  auto workbook_rel_manager = xlsdraw::resource::RelationshipManager{};
   auto const sheet_rel_id = workbook_rel_manager.add_relationship(
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet",
     "worksheets/sheet1.xml"
   );
 
-  auto package_rel_manager = resource::RelationshipManager{};
+  auto package_rel_manager = xlsdraw::resource::RelationshipManager{};
   package_rel_manager.add_relationship(
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
     "xl/workbook.xml"
   );
 
-  // 2. Drawing XMLの生成 (前回のコードを使用)
-  drawing::DrawingGenerator draw_gen;
-  auto shape = drawing::Shape{
-    .id = 1,
-    .name = "Shape",
-    .type = "rect",
-    .from = {.col = 1, .col_off = 0, .row = 1, .row_off = 0},
-    .to = {.col = 3, .col_off = 0, .row = 9, .row_off = 0},
-    .color_argb = "FF4472C4",
-    .text = "",
-    .anchor = drawing::AnchorType::MoveButNoSize,
-    .style = {},
-    .text_body = std::nullopt,
-  };
-  shape.style.fill.solid_fill = drawing::Color{"FF4F81BD"};
-  shape.style.line.color = drawing::Color{"FF1F497D"};
-  shape.style.line.width_emu = 12700; // 約1pt
-
-  auto const drawing_xml = draw_gen.generate({shape});
-
-  // 3. Worksheet XMLの生成 (drawing参照を含む)
-  auto const sheet_xml = fmt::format(
+  auto const worksheet_xml = fmt::format(
     "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
     "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" "
-    "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">"
-    "<sheetData/>"
-    "<drawing r:id=\"{}\"/>"
-    "</worksheet>",
-    drawing_rel_id
+      "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">"
+      "<sheetData/>"
+      "<drawing r:id=\"{}\"/>"
+    "</worksheet>", drawing_rid
   );
 
   auto const workbook_xml = fmt::format(
@@ -66,7 +79,7 @@ int main() {
     sheet_rel_id
   );
 
-  auto content_types_mgr = resource::ContentTypesManager{};
+  auto content_types_mgr = xlsdraw::resource::ContentTypesManager{};
   content_types_mgr.add_override(
     "xl/workbook.xml",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"
@@ -80,16 +93,15 @@ int main() {
     "application/vnd.openxmlformats-officedocument.drawing+xml"
   );
 
-  // 4. ZIPへの書き込み
-  io::ArchiveWriter writer("test03.xlsx");
+  auto writer = xlsdraw::io::ArchiveWriter("test07.xlsx");
   auto const write_result = writer.write_files_detailed({
     {"[Content_Types].xml", content_types_mgr.generate_xml()},
     {"_rels/.rels", package_rel_manager.generate_xml()},
     {"xl/workbook.xml", workbook_xml},
     {"xl/_rels/workbook.xml.rels", workbook_rel_manager.generate_xml()},
-    {"xl/worksheets/sheet1.xml", sheet_xml},
-    {"xl/worksheets/_rels/sheet1.xml.rels", sheet_rel_manager.generate_xml()},
-    {"xl/drawings/drawing1.xml", drawing_xml},
+    {"xl/worksheets/sheet1.xml", worksheet_xml},
+    {"xl/worksheets/_rels/sheet1.xml.rels", rel_manager.generate_xml()},
+    {"xl/drawings/drawing1.xml", drawing_mgr.generate_xml()},
   });
 
   if (!write_result) {
@@ -100,8 +112,6 @@ int main() {
               << "'\n";
     return 1;
   }
-
-  std::cout << "XLSX file generated with shapes.\n";
 
   return 0;
 }

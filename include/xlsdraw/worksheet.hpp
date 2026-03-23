@@ -1,9 +1,8 @@
 #ifndef FBA0B722_DA3A_47DE_9321_859607F6A399
 #define FBA0B722_DA3A_47DE_9321_859607F6A399
 
-#include "drawing.hpp"
 #include "units.hpp"
-#include "drawing_manager.hpp"
+#include "drawing.hpp"
 
 namespace xlsdraw::worksheet {
 
@@ -18,10 +17,10 @@ public:
    * @brief ピクセル座標指定で矩形を追加するヘルパー
    */
   auto add_simple_rect(
-      int col, int row, int width_px, int height_px, 
+      int col, int row, int width_px, int height_px,
       std::string_view text = ""
   ) -> std::expected<uint32_t, DrawingManager::Error> {
-    
+
     auto const emu_w = converter_.pixels_to_emu(width_px).value_or(0);
     auto const emu_h = converter_.pixels_to_emu(height_px).value_or(0);
 

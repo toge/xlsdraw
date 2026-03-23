@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include "xlsdraw/units.hpp"
-#include "xlsdraw/drawing_generator.hpp"
+#include "xlsdraw/drawing.hpp"
 
 int main() {
   using namespace xlsdraw::units;

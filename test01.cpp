@@ -1,7 +1,6 @@
 #include <iostream>
 
 #include "xlsdraw/units.hpp"
-#include "xlsdraw/cell_anchor.hpp"
 #include "xlsdraw/drawing.hpp"
 
 int main() {

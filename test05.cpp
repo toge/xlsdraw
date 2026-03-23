@@ -1,7 +1,6 @@
 #include <iostream>
 
 #include "xlsdraw/drawing.hpp"
-#include "xlsdraw/drawing_generator.hpp"
 
 int main() {
   using namespace xlsdraw::drawing;
