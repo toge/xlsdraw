@@ -1,5 +1,5 @@
-#ifndef A4D77870_EC77_4561_8506_FA189AD52F4A
-#define A4D77870_EC77_4561_8506_FA189AD52F4A
+#ifndef __XLSDRAW_IO_HPP__
+#define __XLSDRAW_IO_HPP__
 
 #include <deque>
 #include <span>
@@ -68,6 +68,13 @@ public:
     return {};
   }
 
+  /**
+   * @brief 一度に複数のファイルを書き込む。途中で失敗してもロールバックは行わない。
+   * 
+   * @param files 書き込むファイル名と内容のペア
+   * @return true 書き込み成功
+   * @return false 書き込み失敗
+   */
   auto write_files(std::initializer_list<std::pair<std::string_view, std::string_view>> files) -> bool {
     return write_files_detailed(files).has_value();
   }
@@ -90,4 +97,4 @@ private:
 
 }  // namespace xlsdraw::io
 
-#endif /* A4D77870_EC77_4561_8506_FA189AD52F4A */
+#endif /* __XLSDRAW_IO_HPP__ */

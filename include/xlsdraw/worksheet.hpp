@@ -1,5 +1,5 @@
-#ifndef FBA0B722_DA3A_47DE_9321_859607F6A399
-#define FBA0B722_DA3A_47DE_9321_859607F6A399
+#ifndef __XLSDRAW_WORKSHEET_HPP__
+#define __XLSDRAW_WORKSHEET_HPP__
 
 #include "units.hpp"
 #include "drawing.hpp"
@@ -48,4 +48,4 @@ private:
 
 } // namespace xlsdraw::worksheet
 
-#endif /* FBA0B722_DA3A_47DE_9321_859607F6A399 */
+#endif /* __XLSDRAW_WORKSHEET_HPP__ */

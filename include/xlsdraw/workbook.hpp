@@ -1,5 +1,5 @@
-#ifndef B1C5E7C3_95BF_4D51_9206_9A76DE0A8E5E
-#define B1C5E7C3_95BF_4D51_9206_9A76DE0A8E5E
+#ifndef __XLSDRAW_WORKBOOK_HPP__
+#define __XLSDRAW_WORKBOOK_HPP__
 
 #include <expected>
 #include <optional>
@@ -28,7 +28,7 @@ inline constexpr auto kOfficeDocumentTarget = "xl/workbook.xml";
 
 class SingleSheetOpenXmlParts {
 public:
-  static auto worksheet_xml(std::optional<std::string_view> drawing_rid) -> std::string {
+  static auto worksheet_xml(std::optional<std::string_view> drawing_rid) {
     if (!drawing_rid) {
       return std::string{
         "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
@@ -50,7 +50,7 @@ public:
     );
   }
 
-  static auto workbook_xml(std::string_view sheet_rel_id, std::string_view sheet_name) -> std::string {
+  static auto workbook_xml(std::string_view sheet_rel_id, std::string_view sheet_name) {
     return fmt::format(
       "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
       "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" "
@@ -194,4 +194,4 @@ private:
 
 } // namespace xlsdraw::workbook
 
-#endif /* B1C5E7C3_95BF_4D51_9206_9A76DE0A8E5E */
+#endif /* __XLSDRAW_WORKBOOK_HPP__ */

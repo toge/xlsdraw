@@ -1,8 +1,7 @@
-#ifndef F7CD894A_794F_430B_B17C_A2568E274B49
-#define F7CD894A_794F_430B_B17C_A2568E274B49
+#ifndef __XLSDRAW_RESOURCE_HPP__
+#define __XLSDRAW_RESOURCE_HPP__
 
 #include <string>
-#include <vector>
 #include <map>
 #include <string_view>
 
@@ -87,4 +86,4 @@ private:
 
 } // namespace xlsdraw::resource
 
-#endif /* F7CD894A_794F_430B_B17C_A2568E274B49 */
+#endif /* __XLSDRAW_RESOURCE_HPP__ */

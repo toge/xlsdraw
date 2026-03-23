@@ -1,5 +1,5 @@
-#ifndef B9146431_4BF1_429A_A985_8D2B11A9AC0F
-#define B9146431_4BF1_429A_A985_8D2B11A9AC0F
+#ifndef __XLSDRAW_UNITS_HPP__
+#define __XLSDRAW_UNITS_HPP__
 
 #include <cstdint>
 #include <expected>
@@ -53,4 +53,4 @@ private:
 
 }
 
-#endif /* B9146431_4BF1_429A_A985_8D2B11A9AC0F */
+#endif /* __XLSDRAW_UNITS_HPP__ */

@@ -1,5 +1,5 @@
-#ifndef C888F150_6E10_4925_AE14_FCD9ECF976BA
-#define C888F150_6E10_4925_AE14_FCD9ECF976BA
+#ifndef __XLSDRAW_DRAWING_HPP__
+#define __XLSDRAW_DRAWING_HPP__
 
 #include <algorithm>
 #include <array>
@@ -135,9 +135,8 @@ struct PresetShapeInfo {
   ShapeRenderKind render_kind;
 };
 
-// Phase 1 では、Excel で利用頻度の高い標準オートシェイプを
-// 基本図形・ブロック矢印・フローチャートの3 family で公開する。
-inline constexpr auto kSupportedPresetShapes = std::array{
+// 利用頻度の高い標準オートシェイプである基本図形・ブロック矢印・フローチャートを公開する
+inline auto constexpr kSupportedPresetShapes = std::array{
   PresetShapeInfo{PresetShape::Rect, "rect", "Rectangle", ShapePresetFamily::Basic, ShapeRenderKind::Shape},
   PresetShapeInfo{PresetShape::RoundRect, "roundRect", "Rounded Rectangle", ShapePresetFamily::Basic, ShapeRenderKind::Shape},
   PresetShapeInfo{PresetShape::Ellipse, "ellipse", "Ellipse", ShapePresetFamily::Basic, ShapeRenderKind::Shape},
@@ -294,7 +293,7 @@ struct LineProperties {
 
 struct FillProperties {
   std::optional<Color> solid_fill;
-  // 将来的には gradient_fill などを追加可能
+  // TODO: gradient_fillなどを追加
 
   auto generate_xml() const -> std::string {
     if (solid_fill) {
@@ -441,7 +440,6 @@ public:
   }
 };
 
-
 using namespace std::string_view_literals;
 
 class DrawingGenerator {
@@ -449,21 +447,19 @@ public:
   // 全体のXMLを組み立てる
   auto generate(std::vector<Shape> const& shapes) const {
     auto xml = std::string{header_};
-
     for (auto const& shape : shapes) {
       xml += generate_anchor(shape);
     }
-
     xml += "</xdr:wsDr>";
     return xml;
   }
 
 private:
-  static auto default_tx_body_xml() -> std::string {
-    return "<xdr:txBody><a:bodyPr/><a:lstStyle/><a:p/></xdr:txBody>";
+  static auto default_tx_body_xml() {
+    return std::string{"<xdr:txBody><a:bodyPr/><a:lstStyle/><a:p/></xdr:txBody>"};
   }
 
-  auto generate_style_xml() const -> std::string {
+  auto generate_style_xml() const {
     return std::string{
       "<xdr:style>"
         "<a:lnRef idx=\"2\"><a:schemeClr val=\"accent1\"/></a:lnRef>"
@@ -566,7 +562,7 @@ private:
 class DrawingManager {
 public:
   // 図形追加時のエラー定義
-  enum class Error { InvalidPosition, InvalidGeometry, DuplicateId };
+  enum class Error : std::uint8_t { InvalidPosition, InvalidGeometry, DuplicateId };
 
   explicit
   DrawingManager(uint32_t start_id = 1)
@@ -599,7 +595,7 @@ public:
    * @brief 現在管理している全図形のXMLを生成する
    */
   [[nodiscard]]
-  auto generate_xml() const -> std::string {
+  auto generate_xml() const {
     DrawingGenerator generator;
     return generator.generate(shapes_);
   }
@@ -608,7 +604,7 @@ public:
    * @brief 管理している図形の数を取得
    */
   [[nodiscard]]
-  auto shape_count() const noexcept -> size_t {
+  auto shape_count() const noexcept {
     return shapes_.size();
   }
 
@@ -639,7 +635,6 @@ inline auto drawing_manager_error_message(DrawingManager::Error error) noexcept 
   return "unknown drawing manager error";
 }
 
+} // namespace xlsdraw::drawing
 
-}
-
-#endif /* C888F150_6E10_4925_AE14_FCD9ECF976BA */
+#endif /* __XLSDRAW_DRAWING_HPP__ */
