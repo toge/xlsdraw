@@ -114,3 +114,54 @@ TEST_CASE("single sheet workbook builder writes connector and callout XML") {
 
   std::filesystem::remove(archive_path);
 }
+
+TEST_CASE("single sheet workbook builder writes gradient fill XML") {
+  auto const archive_path = std::filesystem::current_path() / "test_workbook_gradient.xlsx";
+  std::filesystem::remove(archive_path);
+
+  auto builder = xlsdraw::workbook::SingleSheetDrawingWorkbookBuilder{
+    archive_path.string(),
+    "Gradients"
+  };
+
+  auto shape = xlsdraw::drawing::make_preset_shape(
+    xlsdraw::drawing::PresetShape::Rect,
+    "GradientRect"
+  );
+  shape.from = {.col = 1, .col_off = 0, .row = 1, .row_off = 0};
+  shape.to = {.col = 1, .col_off = 100, .row = 1, .row_off = 100};
+  shape.style.fill.gradient_fill = xlsdraw::drawing::GradientFill{
+    .stops = {
+      {.position = 0, .color = xlsdraw::drawing::Color{"FF0000FF"}},
+      {.position = 100000, .color = xlsdraw::drawing::Color{"FFFFFFFF"}},
+    },
+    .shade = xlsdraw::drawing::LinearGradient{
+      .angle = 5400000,
+      .scaled = false,
+    },
+  };
+
+  REQUIRE(builder.add_shape(std::move(shape)).has_value());
+  REQUIRE(builder.save().has_value());
+
+  int err = 0;
+  auto* archive = zip_open(archive_path.string().c_str(), ZIP_RDONLY, &err);
+  REQUIRE(archive != nullptr);
+
+  zip_stat_t stat{};
+  REQUIRE(zip_stat(archive, "xl/drawings/drawing1.xml", 0, &stat) == 0);
+
+  auto* file = zip_fopen(archive, "xl/drawings/drawing1.xml", 0);
+  REQUIRE(file != nullptr);
+
+  auto xml = std::string(static_cast<std::size_t>(stat.size), '\0');
+  REQUIRE(zip_fread(file, xml.data(), xml.size()) == static_cast<zip_int64_t>(xml.size()));
+  REQUIRE(zip_fclose(file) == 0);
+  REQUIRE(zip_close(archive) == 0);
+
+  CHECK(xml.find("<a:gradFill>") != std::string::npos);
+  CHECK(xml.find("<a:lin ang=\"5400000\" scaled=\"0\"/>") != std::string::npos);
+  CHECK(xml.find("<a:solidFill>") == std::string::npos);
+
+  std::filesystem::remove(archive_path);
+}

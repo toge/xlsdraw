@@ -41,6 +41,7 @@ save-commands.json
 .ccls-cache
 .cache
 .vscode
+.worktrees
 
 compile_commands.json
 

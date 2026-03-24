@@ -9,6 +9,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "fmt/core.h"
@@ -293,15 +294,120 @@ struct LineProperties {
 
 struct FillProperties {
   std::optional<Color> solid_fill;
-  // TODO: gradient_fillなどを追加
+  struct GradientStop {
+    int32_t position;
+    Color color;
+
+    auto generate_xml() const -> std::string {
+      return fmt::format("<a:gs pos=\"{}\">{}</a:gs>", position, color.to_xml());
+    }
+  };
+
+  struct LinearGradient {
+    int32_t angle{0};
+    bool scaled{false};
+
+    auto generate_xml() const -> std::string {
+      return fmt::format("<a:lin ang=\"{}\" scaled=\"{}\"/>", angle, scaled ? 1 : 0);
+    }
+  };
+
+  struct GradientFillToRect {
+    std::optional<int32_t> l;
+    std::optional<int32_t> t;
+    std::optional<int32_t> r;
+    std::optional<int32_t> b;
+
+    auto generate_xml() const -> std::string {
+      auto xml = std::string{"<a:fillToRect"};
+      if (l) {
+        xml += fmt::format(" l=\"{}\"", *l);
+      }
+      if (t) {
+        xml += fmt::format(" t=\"{}\"", *t);
+      }
+      if (r) {
+        xml += fmt::format(" r=\"{}\"", *r);
+      }
+      if (b) {
+        xml += fmt::format(" b=\"{}\"", *b);
+      }
+      xml += "/>";
+      return xml;
+    }
+  };
+
+  enum class PathGradientType { Shape, Circle, Rect };
+
+  struct PathGradient {
+    PathGradientType path{PathGradientType::Shape};
+    std::optional<GradientFillToRect> fill_to_rect;
+
+    auto generate_xml() const -> std::string {
+      auto const path_name = [this]() -> std::string_view {
+        switch (path) {
+          case PathGradientType::Shape:
+            return "shape";
+          case PathGradientType::Circle:
+            return "circle";
+          case PathGradientType::Rect:
+            return "rect";
+        }
+        return "shape";
+      }();
+
+      auto xml = fmt::format("<a:path path=\"{}\">", path_name);
+      if (fill_to_rect) {
+        xml += fill_to_rect->generate_xml();
+      }
+      xml += "</a:path>";
+      return xml;
+    }
+  };
+
+  struct GradientFill {
+    std::vector<GradientStop> stops;
+    std::variant<LinearGradient, PathGradient> shade;
+
+    auto generate_xml() const -> std::string {
+      if (stops.size() < 2) {
+        return {};
+      }
+
+      auto xml = std::string{"<a:gradFill><a:gsLst>"};
+      for (auto const& stop : stops) {
+        xml += stop.generate_xml();
+      }
+      xml += "</a:gsLst>";
+      xml += std::visit([](auto const& value) { return value.generate_xml(); }, shade);
+      xml += "</a:gradFill>";
+      return xml;
+    }
+  };
+
+  std::optional<GradientFill> gradient_fill;
 
   auto generate_xml() const -> std::string {
+    if (gradient_fill) {
+      auto const gradient_xml = gradient_fill->generate_xml();
+      if (!gradient_xml.empty()) {
+        return gradient_xml;
+      }
+      return "<a:noFill/>";
+    }
     if (solid_fill) {
       return fmt::format("<a:solidFill>{}</a:solidFill>", solid_fill->to_xml());
     }
     return "<a:noFill/>"; // デフォルトは塗りつぶしなし
   }
 };
+
+using GradientStop = FillProperties::GradientStop;
+using LinearGradient = FillProperties::LinearGradient;
+using GradientFillToRect = FillProperties::GradientFillToRect;
+using PathGradient = FillProperties::PathGradient;
+using PathGradientType = FillProperties::PathGradientType;
+using GradientFill = FillProperties::GradientFill;
 
 struct TextRun {
   std::string text;
