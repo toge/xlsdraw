@@ -118,3 +118,164 @@ TEST_CASE("drawing generator emits callout and connector shapes") {
       != std::string::npos
   );
 }
+
+TEST_CASE("drawing generator emits linear gradient fills ahead of solid fills") {
+  auto manager = xlsdraw::drawing::DrawingManager{};
+
+  auto shape = xlsdraw::drawing::make_preset_shape(
+    xlsdraw::drawing::PresetShape::Rect,
+    "GradientRect"
+  );
+  shape.from = {.col = 1, .col_off = 0, .row = 1, .row_off = 0};
+  shape.to = {.col = 1, .col_off = 100, .row = 1, .row_off = 100};
+  shape.style.fill.solid_fill = xlsdraw::drawing::Color{"FF445566"};
+  shape.style.fill.gradient_fill = xlsdraw::drawing::GradientFill{
+    .stops = {
+      {.position = 0, .color = xlsdraw::drawing::Color{"FF112233"}},
+      {.position = 100000, .color = xlsdraw::drawing::Color{"FFABCDEF"}},
+    },
+    .shade = xlsdraw::drawing::LinearGradient{
+      .angle = 5400000,
+      .scaled = false,
+    },
+  };
+
+  REQUIRE(manager.add_shape(std::move(shape)).has_value());
+
+  auto const xml = manager.generate_xml();
+  CHECK(xml.find("<a:gradFill>") != std::string::npos);
+  CHECK(xml.find("<a:gs pos=\"0\">") != std::string::npos);
+  CHECK(xml.find("<a:gs pos=\"100000\">") != std::string::npos);
+  CHECK(xml.find("<a:srgbClr val=\"FF112233\"/>") != std::string::npos);
+  CHECK(xml.find("<a:srgbClr val=\"FFABCDEF\"/>") != std::string::npos);
+  CHECK(xml.find("<a:lin ang=\"5400000\" scaled=\"0\"/>") != std::string::npos);
+  CHECK(xml.find("<a:solidFill>") == std::string::npos);
+}
+
+TEST_CASE("drawing generator emits path gradient fills for all supported path kinds") {
+  auto manager = xlsdraw::drawing::DrawingManager{};
+
+  auto make_shape = [](std::string name, int col, xlsdraw::drawing::PathGradientType path_type) {
+    auto shape = xlsdraw::drawing::make_preset_shape(
+      xlsdraw::drawing::PresetShape::Rect,
+      std::move(name)
+    );
+    shape.from = {.col = col, .col_off = 0, .row = 1, .row_off = 0};
+    shape.to = {.col = col, .col_off = 100, .row = 1, .row_off = 100};
+    shape.style.fill.gradient_fill = xlsdraw::drawing::GradientFill{
+      .stops = {
+        {.position = 0, .color = xlsdraw::drawing::Color{"FF0000FF"}},
+        {.position = 100000, .color = xlsdraw::drawing::Color{"FFFFFFFF"}},
+      },
+      .shade = xlsdraw::drawing::PathGradient{
+        .path = path_type,
+        .fill_to_rect = xlsdraw::drawing::GradientFillToRect{
+          .l = 10000,
+          .t = 20000,
+          .r = 30000,
+          .b = 40000,
+        },
+      },
+    };
+    return shape;
+  };
+
+  REQUIRE(manager.add_shape(make_shape("ShapePath", 1, xlsdraw::drawing::PathGradientType::Shape)).has_value());
+  REQUIRE(manager.add_shape(make_shape("CirclePath", 3, xlsdraw::drawing::PathGradientType::Circle)).has_value());
+  REQUIRE(manager.add_shape(make_shape("RectPath", 5, xlsdraw::drawing::PathGradientType::Rect)).has_value());
+
+  auto const xml = manager.generate_xml();
+  CHECK(xml.find("<a:path path=\"shape\">") != std::string::npos);
+  CHECK(xml.find("<a:path path=\"circle\">") != std::string::npos);
+  CHECK(xml.find("<a:path path=\"rect\">") != std::string::npos);
+  CHECK(xml.find("<a:fillToRect l=\"10000\" t=\"20000\" r=\"30000\" b=\"40000\"/>") != std::string::npos);
+  CHECK(xml.find("<a:srgbClr val=\"FF0000FF\"/>") != std::string::npos);
+  CHECK(xml.find("<a:srgbClr val=\"FFFFFFFF\"/>") != std::string::npos);
+}
+
+TEST_CASE("drawing generator omits unset fillToRect attributes") {
+  auto manager = xlsdraw::drawing::DrawingManager{};
+
+  auto shape = xlsdraw::drawing::make_preset_shape(
+    xlsdraw::drawing::PresetShape::Rect,
+    "PartialFillToRect"
+  );
+  shape.from = {.col = 1, .col_off = 0, .row = 1, .row_off = 0};
+  shape.to = {.col = 1, .col_off = 100, .row = 1, .row_off = 100};
+  shape.style.fill.gradient_fill = xlsdraw::drawing::GradientFill{
+    .stops = {
+      {.position = 0, .color = xlsdraw::drawing::Color{"FF0000FF"}},
+      {.position = 100000, .color = xlsdraw::drawing::Color{"FFFFFFFF"}},
+    },
+    .shade = xlsdraw::drawing::PathGradient{
+      .path = xlsdraw::drawing::PathGradientType::Shape,
+      .fill_to_rect = xlsdraw::drawing::GradientFillToRect{
+        .l = 10000,
+        .t = std::nullopt,
+        .r = std::nullopt,
+        .b = 40000,
+      },
+    },
+  };
+
+  REQUIRE(manager.add_shape(std::move(shape)).has_value());
+
+  auto const xml = manager.generate_xml();
+  CHECK(xml.find("<a:fillToRect l=\"10000\" b=\"40000\"/>") != std::string::npos);
+  CHECK(xml.find(" t=\"0\"") == std::string::npos);
+  CHECK(xml.find(" r=\"0\"") == std::string::npos);
+}
+
+TEST_CASE("drawing generator skips incomplete gradient fills with fewer than two stops") {
+  auto manager = xlsdraw::drawing::DrawingManager{};
+
+  auto shape = xlsdraw::drawing::make_preset_shape(
+    xlsdraw::drawing::PresetShape::Rect,
+    "IncompleteGradient"
+  );
+  shape.from = {.col = 1, .col_off = 0, .row = 1, .row_off = 0};
+  shape.to = {.col = 1, .col_off = 100, .row = 1, .row_off = 100};
+  shape.style.fill.gradient_fill = xlsdraw::drawing::GradientFill{
+    .stops = {
+      {.position = 0, .color = xlsdraw::drawing::Color{"FF112233"}},
+    },
+    .shade = xlsdraw::drawing::LinearGradient{
+      .angle = 0,
+      .scaled = false,
+    },
+  };
+
+  REQUIRE(manager.add_shape(std::move(shape)).has_value());
+
+  auto const xml = manager.generate_xml();
+  CHECK(xml.find("<a:gradFill>") == std::string::npos);
+  CHECK(xml.find("<a:noFill/>") != std::string::npos);
+}
+
+TEST_CASE("drawing generator keeps gradient precedence even when the gradient is incomplete") {
+  auto manager = xlsdraw::drawing::DrawingManager{};
+
+  auto shape = xlsdraw::drawing::make_preset_shape(
+    xlsdraw::drawing::PresetShape::Rect,
+    "IncompleteGradientWithSolid"
+  );
+  shape.from = {.col = 1, .col_off = 0, .row = 1, .row_off = 0};
+  shape.to = {.col = 1, .col_off = 100, .row = 1, .row_off = 100};
+  shape.style.fill.solid_fill = xlsdraw::drawing::Color{"FF445566"};
+  shape.style.fill.gradient_fill = xlsdraw::drawing::GradientFill{
+    .stops = {
+      {.position = 0, .color = xlsdraw::drawing::Color{"FF112233"}},
+    },
+    .shade = xlsdraw::drawing::LinearGradient{
+      .angle = 0,
+      .scaled = false,
+    },
+  };
+
+  REQUIRE(manager.add_shape(std::move(shape)).has_value());
+
+  auto const xml = manager.generate_xml();
+  CHECK(xml.find("<a:gradFill>") == std::string::npos);
+  CHECK(xml.find("<a:solidFill>") == std::string::npos);
+  CHECK(xml.find("<a:noFill/>") != std::string::npos);
+}
