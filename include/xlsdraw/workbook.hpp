@@ -13,6 +13,11 @@
 #include "xlsdraw/io.hpp"
 #include "xlsdraw/resource.hpp"
 
+/**
+ * @file workbook.hpp
+ * @brief 単一シートの XLSX ワークブックを生成する API を定義します。
+ */
+
 namespace xlsdraw::workbook {
 
 namespace detail {
@@ -26,8 +31,16 @@ inline constexpr auto kDrawingTarget = "../drawings/drawing1.xml";
 inline constexpr auto kWorksheetTarget = "worksheets/sheet1.xml";
 inline constexpr auto kOfficeDocumentTarget = "xl/workbook.xml";
 
+/**
+ * @brief 単一シート構成で必要な OpenXML 部品文字列を生成します。
+ */
 class SingleSheetOpenXmlParts {
 public:
+  /**
+   * @brief Worksheet XML を生成します。
+   * @param[in] drawing_rid 描画パートへの Relationship ID です。未指定なら `<drawing>` 要素は出力しません。
+   * @return Worksheet パート XML を返します。
+   */
   static auto worksheet_xml(std::optional<std::string_view> drawing_rid) {
     if (!drawing_rid) {
       return std::string{
@@ -50,6 +63,12 @@ public:
     );
   }
 
+  /**
+   * @brief Workbook XML を生成します。
+   * @param[in] sheet_rel_id ワークブックからワークシートへの Relationship ID です。
+   * @param[in] sheet_name シート名です。
+   * @return Workbook パート XML を返します。
+   */
   static auto workbook_xml(std::string_view sheet_rel_id, std::string_view sheet_name) {
     return fmt::format(
       "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
@@ -65,17 +84,36 @@ public:
 
 } // namespace detail
 
+/**
+ * @brief 単一ワークシート・単一描画構成の XLSX ファイルを構築する高レベル API です。
+ *
+ * このクラスを使用することで、複雑な OpenXML パッケージ構造（Relationship, Content Types など）を
+ * 意識することなく、図形を含んだ XLSX ファイルを出力できます。
+ */
 class SingleSheetDrawingWorkbookBuilder {
 public:
+  /**
+   * @brief 追加した図形を後で参照・編集するためのハンドル情報です。
+   */
   struct ShapeHandle {
-    uint32_t id;
-    std::string name;
+    uint32_t id;      ///< 内部で自動採番された一意の図形 ID です。
+    std::string name; ///< 図形に付けられた名前です。
   };
 
+  /**
+   * @brief ワークブックビルダを初期化します。
+   * @param[in] output_path 生成する XLSX ファイルの保存パスです。
+   * @param[in] sheet_name ワークブック内に作成するシートの名前（既定値: "Sheet1"）です。
+   */
   explicit SingleSheetDrawingWorkbookBuilder(std::string output_path, std::string sheet_name = "Sheet1")
       : output_path_(std::move(output_path)),
         sheet_name_(std::move(sheet_name)) {}
 
+  /**
+   * @brief ワークシートに図形を追加します。
+   * @param[in] shape 追加する図形オブジェクト（@ref drawing::Shape）です。
+   * @return 成功時は図形ハンドル（@ref ShapeHandle）、失敗時はエラーメッセージを返します。
+   */
   auto add_shape(drawing::Shape shape) -> std::expected<ShapeHandle, std::string> {
     auto const shape_name = shape.name;
     auto const add_result = drawing_mgr_.add_shape(std::move(shape));
@@ -93,15 +131,28 @@ public:
     };
   }
 
+  /**
+   * @brief 現在登録されている図形の総数を取得します。
+   * @return 図形数です。
+   */
   [[nodiscard]]
   auto shape_count() const noexcept -> size_t {
     return drawing_mgr_.shape_count();
   }
 
+  /**
+   * @brief 登録済みの図形を ID 指定で取得し、プロパティを編集します。
+   * @param[in] id 編集対象の図形 ID です。
+   * @return 図形へのポインタを返します。指定した ID が存在しない場合は @c nullptr を返します。
+   */
   auto get_shape_mut(uint32_t id) -> drawing::Shape* {
     return drawing_mgr_.get_shape_mut(id);
   }
 
+  /**
+   * @brief 登録されたすべてのデータ（シート、図形、パッケージ構造）を XLSX ファイルとして保存します。
+   * @return 成功時は空の @c std::expected 、失敗時は詳細メッセージを返します。
+   */
   auto save() -> std::expected<void, std::string> {
     if (sheet_name_.empty()) {
       return std::unexpected("sheet name must not be empty");
@@ -174,6 +225,13 @@ public:
   }
 
 private:
+  /**
+   * @brief 必須ファイルの書き込みを試行し、失敗時は詳細なエラーメッセージを返します。
+   * @param[in,out] writer 使用するアーカイブライターです。
+   * @param[in] internal_path 書き込み先の内部パスです。
+   * @param[in] content 書き込むデータ内容です。
+   * @return 成功時は空の expected です。
+   */
   static auto write_required_file(io::ArchiveWriter& writer, std::string_view internal_path, std::string_view content)
       -> std::expected<void, std::string> {
     auto const result = writer.write_file_detailed(internal_path, content);
@@ -187,9 +245,9 @@ private:
     return {};
   }
 
-  std::string output_path_;
-  std::string sheet_name_;
-  drawing::DrawingManager drawing_mgr_{};
+  std::string output_path_;           ///< XLSX ファイルの出力先です。
+  std::string sheet_name_;            ///< シート名です。
+  drawing::DrawingManager drawing_mgr_{}; ///< 図形の管理と XML 生成を担当するインスタンスです。
 };
 
 } // namespace xlsdraw::workbook

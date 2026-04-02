@@ -279,3 +279,24 @@ TEST_CASE("drawing generator keeps gradient precedence even when the gradient is
   CHECK(xml.find("<a:solidFill>") == std::string::npos);
   CHECK(xml.find("<a:noFill/>") != std::string::npos);
 }
+
+TEST_CASE("new preset shapes are correctly mapped") {
+  using namespace xlsdraw::drawing;
+
+  CHECK(preset_shape_prst(PresetShape::Pentagon) == "pentagon");
+  CHECK(preset_shape_prst(PresetShape::Heart) == "heart");
+  CHECK(preset_shape_prst(PresetShape::MathPlus) == "mathPlus");
+  CHECK(preset_shape_prst(PresetShape::Star5) == "star5");
+  CHECK(preset_shape_prst(PresetShape::Ribbon) == "ribbon");
+  CHECK(preset_shape_prst(PresetShape::Snip1Rect) == "snip1Rect");
+
+  CHECK(
+    preset_shape_family(PresetShape::Star5)
+      == ShapePresetFamily::StarAndBanner
+  );
+  CHECK(
+    preset_shape_family(PresetShape::MathPlus)
+      == ShapePresetFamily::Equation
+  );
+}
+
