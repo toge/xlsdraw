@@ -165,3 +165,33 @@ TEST_CASE("single sheet workbook builder writes gradient fill XML") {
 
   std::filesystem::remove(archive_path);
 }
+
+TEST_CASE("single sheet workbook builder omits drawing parts when no shapes are added") {
+  auto const archive_path = std::filesystem::current_path() / "test_workbook_empty.xlsx";
+  std::filesystem::remove(archive_path);
+
+  auto builder = xlsdraw::workbook::SingleSheetDrawingWorkbookBuilder{
+    archive_path.string(),
+    "Empty"
+  };
+
+  CHECK(builder.shape_count() == 0);
+  REQUIRE(builder.save().has_value());
+  REQUIRE(std::filesystem::exists(archive_path));
+
+  int err = 0;
+  auto* archive = zip_open(archive_path.string().c_str(), ZIP_RDONLY, &err);
+  REQUIRE(archive != nullptr);
+
+  // 描画パーツとそれを参照するシートの rels は書き込まれてはならない。
+  zip_stat_t stat{};
+  CHECK(zip_stat(archive, "xl/drawings/drawing1.xml", 0, &stat) != 0);
+  CHECK(zip_stat(archive, "xl/worksheets/_rels/sheet1.xml.rels", 0, &stat) != 0);
+
+  // ワークブックとワークシートは依然として存在しなければならない。
+  CHECK(zip_stat(archive, "xl/workbook.xml", 0, &stat) == 0);
+  CHECK(zip_stat(archive, "xl/worksheets/sheet1.xml", 0, &stat) == 0);
+
+  REQUIRE(zip_close(archive) == 0);
+  std::filesystem::remove(archive_path);
+}

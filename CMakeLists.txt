@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.25)
-project(xlsdraw LANGUAGES CXX)
+project(
+    xlsdraw
+    LANGUAGES CXX
+    VERSION 0.1.0
+    DESCRIPTION "Header-only C++ library for building XLSX with drawings"
+    HOMEPAGE_URL "https://github.com/toge/xlsdraw"
+)
 
 ## add stdc++ compiler flag
 include(CheckCXXCompilerFlag)
@@ -13,16 +19,16 @@ elseif(COMPILER_SUPPORTS_CXX23)
 elseif(COMPILER_SUPPORTS_CXX20)
     set(STD_CPP cxx_std_20)
 else()
-    message(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++20 support. Please use a different C++ compiler.")
+    message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++20 support. Please use a different C++ compiler.")
 endif()
 
 ## add warning
-if (CMAKE_COMPILER_IS_GNUCXX)
+if(CMAKE_COMPILER_IS_GNUCXX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g3")
 endif()
 
-if (MSVC)
+if(MSVC)
     if(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
         string(REGEX REPLACE "/W[0-4]" "/W4" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     else()
@@ -31,10 +37,10 @@ if (MSVC)
 endif()
 
 ## optimization
-if (CMAKE_COMPILER_IS_GNUCXX)
+if(CMAKE_COMPILER_IS_GNUCXX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native")
 endif()
-if (MSVC)
+if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Ox")
 endif()
 
@@ -43,35 +49,95 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# ---------------------------------------------------------------------------
+# Header-only library target (xlsdraw::xlsdraw)
+# ---------------------------------------------------------------------------
+add_library(xlsdraw INTERFACE)
+add_library(xlsdraw::xlsdraw ALIAS xlsdraw)
+
+target_include_directories(
+    xlsdraw
+    INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+)
+target_compile_features(xlsdraw INTERFACE ${STD_CPP})
+
+# xlsdraw uses libzip, pugixml, and fmt. Declare them as transitive
+# dependencies so consumers only need to find_package(xlsdraw).
 find_package(libzip CONFIG REQUIRED)
 find_package(pugixml CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 
-enable_testing()
-add_subdirectory(test)
+target_link_libraries(
+    xlsdraw
+    INTERFACE
+        libzip::zip
+        pugixml::pugixml
+        fmt::fmt
+)
 
-include_directories(include)
+# ---------------------------------------------------------------------------
+# Install rules
+# ---------------------------------------------------------------------------
+include(GNUInstallDirs)
 
-# add_executable(example example.cpp)
-# target_link_libraries(example PRIVATE
-#     libzip::zip
-#     pugixml::pugixml
-#     fmt::fmt
-# )
-# target_compile_features(example PRIVATE ${STD_CPP})
+install(
+    TARGETS xlsdraw
+    EXPORT xlsdrawTargets
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
 
-foreach(idx RANGE 1 100)
-    if(idx LESS 10)
-        set(idx "0${idx}")
-    endif()
+install(
+    DIRECTORY include/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    FILES_MATCHING
+        PATTERN "*.hpp"
+        PATTERN "*.h"
+)
 
-    if(EXISTS "${CMAKE_SOURCE_DIR}/test${idx}.cpp")
-        add_executable(test${idx} test${idx}.cpp)
-        target_link_libraries(test${idx} PRIVATE
-            libzip::zip
-            pugixml::pugixml
-            fmt::fmt
-        )
-        target_compile_features(test${idx} PRIVATE ${STD_CPP})
-    endif()
-endforeach()
+# Export the library target so consumers can use it through find_package.
+install(
+    EXPORT xlsdrawTargets
+    FILE xlsdrawTargets.cmake
+    NAMESPACE xlsdraw::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xlsdraw
+)
+
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/xlsdrawConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/xlsdrawConfig.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xlsdraw
+)
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/xlsdrawConfigVersion.cmake"
+    VERSION "${PROJECT_VERSION}"
+    COMPATIBILITY SameMajorVersion
+)
+
+install(
+    FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/xlsdrawConfig.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/xlsdrawConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xlsdraw
+)
+
+# ---------------------------------------------------------------------------
+# Tests and a minimal usage sample.
+# ---------------------------------------------------------------------------
+option(XLSDRAW_BUILD_TESTS "Build xlsdraw tests" ON)
+option(XLSDRAW_BUILD_EXAMPLES "Build xlsdraw usage examples" ON)
+
+if(XLSDRAW_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(test)
+endif()
+
+if(XLSDRAW_BUILD_EXAMPLES)
+    add_executable(xlsdraw_example example/xlsdraw_example.cpp)
+    target_link_libraries(xlsdraw_example PRIVATE xlsdraw::xlsdraw)
+    target_compile_features(xlsdraw_example PRIVATE ${STD_CPP})
+endif()
