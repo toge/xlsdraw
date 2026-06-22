@@ -51,6 +51,7 @@ jobs:
             ~/vcpkg/bootstrap-vcpkg.sh
           else
             git -C ~/vcpkg fetch origin
+            git -C ~/vcpkg merge --ff-only origin/master
           fi
 
       - name: Configure
@@ -95,6 +96,7 @@ jobs:
             call C:\vcpkg\bootstrap-vcpkg.bat -disableMetrics
           ) else (
             git -C C:\vcpkg fetch origin
+            git -C C:\vcpkg merge --ff-only origin/master
           )
         shell: cmd
 
@@ -147,6 +149,7 @@ jobs:
             ~/vcpkg/bootstrap-vcpkg.sh
           else
             git -C ~/vcpkg fetch origin
+            git -C ~/vcpkg merge --ff-only origin/master
           fi
 
       - name: Configure
@@ -199,6 +202,7 @@ jobs:
             ~/vcpkg/bootstrap-vcpkg.sh
           else
             git -C ~/vcpkg fetch origin
+            git -C ~/vcpkg merge --ff-only origin/master
           fi
 
       - name: Configure
