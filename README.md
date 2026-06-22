@@ -112,14 +112,14 @@ int main() {
 
 ## ヘッダー構成
 
-| ヘッダー | 役割 |
-| --- | --- |
-| `xlsdraw/drawing.hpp` | `Marker` / `Shape` / `PresetShape` / `Color` などの図形モデルと、`SpreadsheetDrawing` XML の生成器。 |
-| `xlsdraw/workbook.hpp` | 単一シート構成の XLSX ワークブックを生成する `SingleSheetDrawingWorkbookBuilder`。 |
-| `xlsdraw/worksheet.hpp` | ワークシート XML 構築の補助。 |
-| `xlsdraw/io.hpp` | libzip をラップした ZIP アーカイブ書き込みクラス `ArchiveWriter`。 |
-| `xlsdraw/units.hpp` | EMU 単位とピクセル/インチの相互変換 (`EmuConverter`)。 |
-| `xlsdraw/resource.hpp` | 埋め込みリソース(画像等)のためのハンドル。 |
+| ヘッダー                | 役割                                                                                                 |
+| ----------------------- | ---------------------------------------------------------------------------------------------------- |
+| `xlsdraw/drawing.hpp`   | `Marker` / `Shape` / `PresetShape` / `Color` などの図形モデルと、`SpreadsheetDrawing` XML の生成器。 |
+| `xlsdraw/workbook.hpp`  | 単一シート構成の XLSX ワークブックを生成する `SingleSheetDrawingWorkbookBuilder`。                   |
+| `xlsdraw/worksheet.hpp` | ワークシート XML 構築の補助。                                                                        |
+| `xlsdraw/io.hpp`        | libzip をラップした ZIP アーカイブ書き込みクラス `ArchiveWriter`。                                   |
+| `xlsdraw/units.hpp`     | EMU 単位とピクセル/インチの相互変換 (`EmuConverter`)。                                               |
+| `xlsdraw/resource.hpp`  | 埋め込みリソース(画像等)のためのハンドル。                                                           |
 
 ## ライセンス
 
