@@ -8,9 +8,8 @@ project(
 )
 
 ## ビルドオプション（副作用より前に宣言する）
-option(XLSDRAW_BUILD_TESTS "Build xlsdraw tests" ON)
-option(XLSDRAW_BUILD_EXAMPLES "Build xlsdraw usage examples" ON)
-option(XLSDRAW_NATIVE_ARCH "Enable -march=native optimization (不可搬、配布ライブラリでは使用しないこと)" OFF)
+option(BUILD_TEST "Build xlsdraw tests" ON)
+option(BUILD_EXAMPLE "Build xlsdraw usage examples" ON)
 
 ## 警告フラグ（ビルドタイプを問わず適用）
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -30,9 +29,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -O3")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3")
-    if(XLSDRAW_NATIVE_ARCH)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
-    endif()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 elseif(MSVC)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Ox")
 endif()
@@ -121,12 +118,12 @@ install(
 # ---------------------------------------------------------------------------
 # Tests and a minimal usage sample.
 # ---------------------------------------------------------------------------
-if(XLSDRAW_BUILD_TESTS)
+if(BUILD_TEST)
     enable_testing()
     add_subdirectory(test)
 endif()
 
-if(XLSDRAW_BUILD_EXAMPLES)
+if(BUILD_EXAMPLE)
     add_executable(xlsdraw_example example/xlsdraw_example.cpp)
     target_link_libraries(xlsdraw_example PRIVATE xlsdraw::xlsdraw)
     target_compile_features(xlsdraw_example PRIVATE cxx_std_23)
