@@ -5,7 +5,7 @@
 TEST_CASE("preset shape catalog exposes phase1 families") {
   auto const presets = xlsdraw::drawing::supported_preset_shapes();
 
-  CHECK(presets.size() >= 70);
+  CHECK(presets.size() == 133);
   CHECK(xlsdraw::drawing::preset_shape_prst(xlsdraw::drawing::PresetShape::Rect) == "rect");
   CHECK(xlsdraw::drawing::preset_shape_prst(xlsdraw::drawing::PresetShape::Chevron) == "chevron");
   CHECK(
@@ -49,7 +49,6 @@ TEST_CASE("drawing generator emits custom text body") {
   auto const xml = manager.generate_xml();
   CHECK(xml.find("Hello") != std::string::npos);
   CHECK(xml.find("a:pPr algn=\"ctr\"") != std::string::npos);
-  CHECK(xml.find("a:endParaRPr lang=\"ja-JP\"") == std::string::npos);
 }
 
 TEST_CASE("drawing generator emits preset geometry shapes") {
@@ -300,3 +299,110 @@ TEST_CASE("new preset shapes are correctly mapped") {
   );
 }
 
+TEST_CASE("anchor type maps to correct editAs attribute") {
+  using namespace xlsdraw::drawing;
+  auto const make = [](AnchorType a) {
+    auto s = make_preset_shape(PresetShape::Rect, "R");
+    s.from = {.col = 0, .col_off = 0, .row = 0, .row_off = 0};
+    s.to   = {.col = 1, .col_off = 0, .row = 1, .row_off = 0};
+    s.anchor = a;
+    DrawingManager mgr;
+    std::ignore = mgr.add_shape(std::move(s));
+    return mgr.generate_xml();
+  };
+
+  CHECK(make(AnchorType::MoveAndSize).find("editAs=\"twoCell\"") != std::string::npos);
+  CHECK(make(AnchorType::MoveButNoSize).find("editAs=\"oneCell\"") != std::string::npos);
+  CHECK(make(AnchorType::NoMoveNoSize).find("editAs=\"absolute\"") != std::string::npos);
+}
+
+TEST_CASE("DrawingManager rejects shape with empty geometry") {
+  auto mgr = xlsdraw::drawing::DrawingManager{};
+  auto s = xlsdraw::drawing::Shape{};
+  s.type = "";  // 空のジオメトリ
+  s.from = {.col = 0, .col_off = 0, .row = 0, .row_off = 0};
+  s.to   = {.col = 1, .col_off = 0, .row = 1, .row_off = 0};
+
+  auto result = mgr.add_shape(std::move(s));
+  REQUIRE(!result.has_value());
+  CHECK(result.error() == xlsdraw::drawing::DrawingManager::Error::InvalidGeometry);
+  // 失敗時に ID が進んでいないことを確認する
+  CHECK(mgr.shape_count() == 0);
+}
+
+TEST_CASE("DrawingManager rejects shape with invalid position") {
+  auto mgr = xlsdraw::drawing::DrawingManager{};
+  auto s = xlsdraw::drawing::make_preset_shape(xlsdraw::drawing::PresetShape::Rect, "R");
+  // to.col < from.col → InvalidPosition
+  s.from = {.col = 5, .col_off = 0, .row = 1, .row_off = 0};
+  s.to   = {.col = 3, .col_off = 0, .row = 5, .row_off = 0};
+
+  auto result = mgr.add_shape(std::move(s));
+  REQUIRE(!result.has_value());
+  CHECK(result.error() == xlsdraw::drawing::DrawingManager::Error::InvalidPosition);
+  CHECK(mgr.shape_count() == 0);
+}
+
+TEST_CASE("DrawingManager next_id does not advance on failed add") {
+  auto mgr = xlsdraw::drawing::DrawingManager{};
+
+  // 失敗させる
+  auto bad = xlsdraw::drawing::Shape{};
+  bad.type = "";
+  bad.from = {0, 0, 0, 0};
+  bad.to   = {1, 0, 1, 0};
+  REQUIRE(!mgr.add_shape(std::move(bad)).has_value());
+
+  // 成功した図形の ID が 1 から始まることを確認する
+  auto good = xlsdraw::drawing::make_preset_shape(xlsdraw::drawing::PresetShape::Rect);
+  good.from = {0, 0, 0, 0};
+  good.to   = {1, 0, 1, 0};
+  auto r = mgr.add_shape(std::move(good));
+  REQUIRE(r.has_value());
+  CHECK(*r == 1);
+}
+
+TEST_CASE("DrawingManager get_shape_mut returns pointer on hit and nullptr on miss") {
+  auto mgr = xlsdraw::drawing::DrawingManager{};
+  auto s = xlsdraw::drawing::make_preset_shape(xlsdraw::drawing::PresetShape::Rect, "R1");
+  s.from = {0, 0, 0, 0};
+  s.to   = {1, 0, 1, 0};
+  auto r = mgr.add_shape(std::move(s));
+  REQUIRE(r.has_value());
+
+  auto* hit = mgr.get_shape_mut(*r);
+  REQUIRE(hit != nullptr);
+  CHECK(hit->name == "R1");
+
+  auto* miss = mgr.get_shape_mut(9999);
+  CHECK(miss == nullptr);
+}
+
+TEST_CASE("xml_escape is applied to TextRun text in generated XML") {
+  auto mgr = xlsdraw::drawing::DrawingManager{};
+  auto s = xlsdraw::drawing::make_preset_shape(xlsdraw::drawing::PresetShape::Rect, "Escape");
+  s.from = {0, 0, 0, 0};
+  s.to   = {1, 0, 1, 0};
+  s.text_body = xlsdraw::drawing::TextBody{
+    .paragraphs = {{
+      .runs = {{.text = "<hello & \"world\">", .color = std::nullopt}}
+    }}
+  };
+  REQUIRE(mgr.add_shape(std::move(s)).has_value());
+
+  auto const xml = mgr.generate_xml();
+  CHECK(xml.find("&lt;hello &amp; &quot;world&quot;&gt;") != std::string::npos);
+  CHECK(xml.find("<hello & \"world\">") == std::string::npos);
+}
+
+TEST_CASE("xml_escape is applied to shape name in generated XML") {
+  auto mgr = xlsdraw::drawing::DrawingManager{};
+  auto s = xlsdraw::drawing::make_preset_shape(xlsdraw::drawing::PresetShape::Rect, "A&B<C>");
+  s.from = {0, 0, 0, 0};
+  s.to   = {1, 0, 1, 0};
+  REQUIRE(mgr.add_shape(std::move(s)).has_value());
+
+  auto const xml = mgr.generate_xml();
+  CHECK(xml.find("name=\"A&amp;B&lt;C&gt;") != std::string::npos);
+  CHECK(xml.find("name=\"A&B<C>") == std::string::npos);
+}

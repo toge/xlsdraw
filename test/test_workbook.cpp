@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -6,7 +7,46 @@
 #include "zip.h"
 
 #include "xlsdraw/drawing.hpp"
+#include "xlsdraw/io.hpp"
 #include "xlsdraw/workbook.hpp"
+
+// ─── テストヘルパー ───────────────────────────────────────────────────────────
+
+/**
+ * @brief テスト用に ZIP アーカイブを読み取り専用でオープンします。
+ * @param[in] path アーカイブのパスです。
+ * @return 成功時は zip_t* ポインタ、失敗時は nullptr を返します。
+ */
+static auto open_zip_for_test(std::filesystem::path const& path) -> zip_t* {
+  int err = 0;
+  return zip_open(path.string().c_str(), ZIP_RDONLY, &err);
+}
+
+/**
+ * @brief ZIP アーカイブ内の指定エントリを文字列として読み出します。
+ * @param[in] archive オープン済みアーカイブです。
+ * @param[in] entry_name 読み出すエントリ名です。
+ * @return 成功時はエントリ内容、失敗時は std::nullopt を返します。
+ */
+static auto read_zip_entry(zip_t* archive, std::string_view entry_name) -> std::optional<std::string> {
+  zip_stat_t stat{};
+  if (zip_stat(archive, entry_name.data(), 0, &stat) != 0) {
+    return std::nullopt;
+  }
+  auto* file = zip_fopen(archive, entry_name.data(), 0);
+  if (!file) {
+    return std::nullopt;
+  }
+  auto content = std::string(static_cast<std::size_t>(stat.size), '\0');
+  if (zip_fread(file, content.data(), content.size()) != static_cast<zip_int64_t>(content.size())) {
+    zip_fclose(file);
+    return std::nullopt;
+  }
+  zip_fclose(file);
+  return content;
+}
+
+// ─── テストケース ─────────────────────────────────────────────────────────────
 
 TEST_CASE("single sheet drawing workbook builder saves drawing workbook") {
   auto const archive_path = std::filesystem::current_path() / "test_workbook.xlsx";
@@ -38,27 +78,18 @@ TEST_CASE("single sheet drawing workbook builder saves drawing workbook") {
   CHECK(added->name == "Rect1");
   CHECK(builder.shape_count() == 1);
 
-  auto const saved = builder.save();
-  REQUIRE(saved.has_value());
+  REQUIRE(builder.save().has_value());
   REQUIRE(std::filesystem::exists(archive_path));
 
-  int err = 0;
-  auto* archive = zip_open(archive_path.string().c_str(), ZIP_RDONLY, &err);
+  auto* archive = open_zip_for_test(archive_path);
   REQUIRE(archive != nullptr);
 
-  zip_stat_t stat{};
-  REQUIRE(zip_stat(archive, "xl/drawings/drawing1.xml", 0, &stat) == 0);
-
-  auto* file = zip_fopen(archive, "xl/drawings/drawing1.xml", 0);
-  REQUIRE(file != nullptr);
-
-  auto xml = std::string(static_cast<std::size_t>(stat.size), '\0');
-  REQUIRE(zip_fread(file, xml.data(), xml.size()) == static_cast<zip_int64_t>(xml.size()));
-  REQUIRE(zip_fclose(file) == 0);
+  auto const xml = read_zip_entry(archive, "xl/drawings/drawing1.xml");
+  REQUIRE(xml.has_value());
   REQUIRE(zip_close(archive) == 0);
 
-  CHECK(xml.find("Hello workbook") != std::string::npos);
-  CHECK(xml.find("Rect1 1") != std::string::npos);
+  CHECK(xml->find("Hello workbook") != std::string::npos);
+  CHECK(xml->find("Rect1 1") != std::string::npos);
 
   std::filesystem::remove(archive_path);
 }
@@ -92,25 +123,17 @@ TEST_CASE("single sheet workbook builder writes connector and callout XML") {
   REQUIRE(builder.add_shape(std::move(connector)).has_value());
   REQUIRE(builder.save().has_value());
 
-  int err = 0;
-  auto* archive = zip_open(archive_path.string().c_str(), ZIP_RDONLY, &err);
+  auto* archive = open_zip_for_test(archive_path);
   REQUIRE(archive != nullptr);
 
-  zip_stat_t stat{};
-  REQUIRE(zip_stat(archive, "xl/drawings/drawing1.xml", 0, &stat) == 0);
-
-  auto* file = zip_fopen(archive, "xl/drawings/drawing1.xml", 0);
-  REQUIRE(file != nullptr);
-
-  auto xml = std::string(static_cast<std::size_t>(stat.size), '\0');
-  REQUIRE(zip_fread(file, xml.data(), xml.size()) == static_cast<zip_int64_t>(xml.size()));
-  REQUIRE(zip_fclose(file) == 0);
+  auto const xml = read_zip_entry(archive, "xl/drawings/drawing1.xml");
+  REQUIRE(xml.has_value());
   REQUIRE(zip_close(archive) == 0);
 
-  CHECK(xml.find("cloudCallout") != std::string::npos);
-  CHECK(xml.find("<xdr:cxnSp>") != std::string::npos);
-  CHECK(xml.find("bentConnector2") != std::string::npos);
-  CHECK(xml.find("</xdr:cxnSp><xdr:clientData/></xdr:twoCellAnchor>") != std::string::npos);
+  CHECK(xml->find("cloudCallout") != std::string::npos);
+  CHECK(xml->find("<xdr:cxnSp>") != std::string::npos);
+  CHECK(xml->find("bentConnector2") != std::string::npos);
+  CHECK(xml->find("</xdr:cxnSp><xdr:clientData/></xdr:twoCellAnchor>") != std::string::npos);
 
   std::filesystem::remove(archive_path);
 }
@@ -144,24 +167,16 @@ TEST_CASE("single sheet workbook builder writes gradient fill XML") {
   REQUIRE(builder.add_shape(std::move(shape)).has_value());
   REQUIRE(builder.save().has_value());
 
-  int err = 0;
-  auto* archive = zip_open(archive_path.string().c_str(), ZIP_RDONLY, &err);
+  auto* archive = open_zip_for_test(archive_path);
   REQUIRE(archive != nullptr);
 
-  zip_stat_t stat{};
-  REQUIRE(zip_stat(archive, "xl/drawings/drawing1.xml", 0, &stat) == 0);
-
-  auto* file = zip_fopen(archive, "xl/drawings/drawing1.xml", 0);
-  REQUIRE(file != nullptr);
-
-  auto xml = std::string(static_cast<std::size_t>(stat.size), '\0');
-  REQUIRE(zip_fread(file, xml.data(), xml.size()) == static_cast<zip_int64_t>(xml.size()));
-  REQUIRE(zip_fclose(file) == 0);
+  auto const xml = read_zip_entry(archive, "xl/drawings/drawing1.xml");
+  REQUIRE(xml.has_value());
   REQUIRE(zip_close(archive) == 0);
 
-  CHECK(xml.find("<a:gradFill>") != std::string::npos);
-  CHECK(xml.find("<a:lin ang=\"5400000\" scaled=\"0\"/>") != std::string::npos);
-  CHECK(xml.find("<a:solidFill>") == std::string::npos);
+  CHECK(xml->find("<a:gradFill>") != std::string::npos);
+  CHECK(xml->find("<a:lin ang=\"5400000\" scaled=\"0\"/>") != std::string::npos);
+  CHECK(xml->find("<a:solidFill>") == std::string::npos);
 
   std::filesystem::remove(archive_path);
 }
@@ -179,8 +194,7 @@ TEST_CASE("single sheet workbook builder omits drawing parts when no shapes are 
   REQUIRE(builder.save().has_value());
   REQUIRE(std::filesystem::exists(archive_path));
 
-  int err = 0;
-  auto* archive = zip_open(archive_path.string().c_str(), ZIP_RDONLY, &err);
+  auto* archive = open_zip_for_test(archive_path);
   REQUIRE(archive != nullptr);
 
   // 描画パーツとそれを参照するシートの rels は書き込まれてはならない。
@@ -194,4 +208,111 @@ TEST_CASE("single sheet workbook builder omits drawing parts when no shapes are 
 
   REQUIRE(zip_close(archive) == 0);
   std::filesystem::remove(archive_path);
+}
+
+TEST_CASE("save() rejects empty sheet name") {
+  auto const archive_path = std::filesystem::current_path() / "test_workbook_emptyname.xlsx";
+  std::filesystem::remove(archive_path);
+
+  auto builder = xlsdraw::workbook::SingleSheetDrawingWorkbookBuilder{
+    archive_path.string(),
+    ""  // 空のシート名
+  };
+
+  auto const result = builder.save();
+  REQUIRE(!result.has_value());
+  CHECK(result.error().find("sheet name") != std::string::npos);
+
+  std::filesystem::remove(archive_path);
+}
+
+TEST_CASE("save() writes all 6 required XLSX parts when shapes exist") {
+  auto const archive_path = std::filesystem::current_path() / "test_workbook_allparts.xlsx";
+  std::filesystem::remove(archive_path);
+
+  auto builder = xlsdraw::workbook::SingleSheetDrawingWorkbookBuilder{
+    archive_path.string(),
+    "Sheet1"
+  };
+
+  auto shape = xlsdraw::drawing::make_preset_shape(xlsdraw::drawing::PresetShape::Rect, "R");
+  shape.from = {.col = 0, .col_off = 0, .row = 0, .row_off = 0};
+  shape.to   = {.col = 1, .col_off = 0, .row = 1, .row_off = 0};
+  REQUIRE(builder.add_shape(std::move(shape)).has_value());
+  REQUIRE(builder.save().has_value());
+
+  auto* archive = open_zip_for_test(archive_path);
+  REQUIRE(archive != nullptr);
+
+  // 6 パーツすべての存在を確認する
+  auto const required_parts = std::vector<std::string_view>{
+    "[Content_Types].xml",
+    "_rels/.rels",
+    "xl/workbook.xml",
+    "xl/_rels/workbook.xml.rels",
+    "xl/worksheets/sheet1.xml",
+    "xl/worksheets/_rels/sheet1.xml.rels",
+    "xl/drawings/drawing1.xml",
+  };
+  for (auto const& part : required_parts) {
+    zip_stat_t stat{};
+    INFO("part: " << part);
+    CHECK(zip_stat(archive, part.data(), 0, &stat) == 0);
+  }
+
+  // [Content_Types].xml に各パートの MIME タイプが含まれることを確認する
+  auto const ct = read_zip_entry(archive, "[Content_Types].xml");
+  REQUIRE(ct.has_value());
+  CHECK(ct->find("spreadsheetml.sheet.main") != std::string::npos);
+  CHECK(ct->find("spreadsheetml.worksheet") != std::string::npos);
+  CHECK(ct->find("drawing") != std::string::npos);
+
+  REQUIRE(zip_close(archive) == 0);
+  std::filesystem::remove(archive_path);
+}
+
+TEST_CASE("save() applies xml_escape to sheet name") {
+  auto const archive_path = std::filesystem::current_path() / "test_workbook_escape.xlsx";
+  std::filesystem::remove(archive_path);
+
+  auto builder = xlsdraw::workbook::SingleSheetDrawingWorkbookBuilder{
+    archive_path.string(),
+    "Sheet<1>&\"2\""  // XML 特殊文字を含むシート名
+  };
+  REQUIRE(builder.save().has_value());
+
+  auto* archive = open_zip_for_test(archive_path);
+  REQUIRE(archive != nullptr);
+
+  auto const wb_xml = read_zip_entry(archive, "xl/workbook.xml");
+  REQUIRE(wb_xml.has_value());
+  REQUIRE(zip_close(archive) == 0);
+
+  // エスケープされた形式で埋め込まれていることを確認する
+  CHECK(wb_xml->find("Sheet&lt;1&gt;&amp;&quot;2&quot;") != std::string::npos);
+  // 生の特殊文字が埋め込まれていないことを確認する
+  CHECK(wb_xml->find("Sheet<1>") == std::string::npos);
+
+  std::filesystem::remove(archive_path);
+}
+
+TEST_CASE("ArchiveWriter is_open returns true after successful construction") {
+  auto const path = std::filesystem::current_path() / "test_is_open.zip";
+  std::filesystem::remove(path);
+
+  {
+    auto writer = xlsdraw::io::ArchiveWriter{path.string()};
+    // libzip は ZIP_CREATE|ZIP_TRUNCATE では zip_open はほぼ常に成功する
+    CHECK(writer.is_open());
+
+    // close() を呼んだ後は is_open() が false を返す
+    REQUIRE(writer.close().has_value());
+    CHECK(!writer.is_open());
+
+    // close 後の write_file_detailed はエラーを返す
+    auto const r = writer.write_file_detailed("x.xml", "<x/>");
+    CHECK(!r.has_value());
+  }
+
+  std::filesystem::remove(path);
 }

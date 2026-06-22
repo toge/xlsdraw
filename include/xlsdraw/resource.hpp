@@ -50,8 +50,12 @@ public:
    */
   [[nodiscard]]
   auto generate_xml() const {
-    auto xml = std::string{"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
-                           "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"};
+    static constexpr std::string_view kHeader =
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
+      "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">";
+    auto xml = std::string{kHeader};
+    // 1 エントリあたり約 200 バイトを見積もって事前確保する
+    xml.reserve(kHeader.size() + rels_.size() * 200 + 20);
     for (auto const& rel : rels_) {
       xml += fmt::format("<Relationship Id=\"{}\" Type=\"{}\" Target=\"{}\"/>",
                          rel.id, rel.type, rel.target);
@@ -104,10 +108,12 @@ public:
    */
   [[nodiscard]]
   auto generate_xml() const -> std::string {
-    auto xml = std::string{
+    static constexpr std::string_view kHeader =
       "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
-      "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">"
-    };
+      "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">";
+    auto xml = std::string{kHeader};
+    // 1 エントリあたり約 150 バイトを見積もって事前確保する
+    xml.reserve(kHeader.size() + (defaults_.size() + overrides_.size()) * 150 + 10);
 
     for (auto const& [ext, ct] : defaults_) {
       xml += fmt::format("<Default Extension=\"{}\" ContentType=\"{}\"/>", ext, ct);

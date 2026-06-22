@@ -61,7 +61,14 @@ jobs:
         run: cmake --build build
 
       - name: Test
-        run: ctest --test-dir build -V
+        run: ctest --test-dir build -V --output-junit test-results.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-gcc-fedora-${{ matrix.fedora_version }}
+          path: build/test-results.xml
 
   windows-msvc:
     runs-on: windows-latest
@@ -148,7 +155,14 @@ jobs:
         run: cmake --build build
 
       - name: Test
-        run: ctest --test-dir build -V
+        run: ctest --test-dir build -V --output-junit test-results.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-clang-fedora-${{ matrix.fedora_version }}
+          path: build/test-results.xml
 
   macos:
     runs-on: macos-latest
@@ -189,4 +203,11 @@ jobs:
         run: cmake --build build
 
       - name: Test
-        run: ctest --test-dir build -V
+        run: ctest --test-dir build -V --output-junit test-results.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-macos
+          path: build/test-results.xml

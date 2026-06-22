@@ -407,20 +407,31 @@ inline auto supported_preset_shapes() noexcept -> std::span<PresetShapeInfo cons
   return kSupportedPresetShapes;
 }
 
+// kSupportedPresetShapes の順序と PresetShape 列挙値の順序が一致することを静的検証する。
+// これにより O(1) のインデックス直接参照の正当性を保証します。
+static_assert(kSupportedPresetShapes[0].preset  == PresetShape::Rect,
+              "kSupportedPresetShapes[0] must be Rect");
+static_assert(kSupportedPresetShapes[35].preset == PresetShape::MathPlus,
+              "kSupportedPresetShapes[35] must be MathPlus");
+static_assert(kSupportedPresetShapes[132].preset == PresetShape::CurvedConnector5,
+              "kSupportedPresetShapes[132] must be CurvedConnector5");
+static_assert(kSupportedPresetShapes.size() == 133,
+              "kSupportedPresetShapes must have exactly 133 entries");
+
 /**
  * @brief プリセット図形のメタデータを返します。
+ *
+ * 列挙値を配列インデックスとして直接参照する O(1) 実装です。
  * @param[in] preset 取得対象のプリセット図形です。
  * @return 対応するメタデータです。
- * @note 未対応値が渡された場合は配列先頭要素を返します。
  */
 [[nodiscard]]
 inline auto preset_shape_info(PresetShape preset) noexcept -> PresetShapeInfo const& {
-  auto const it = std::find_if(
-    kSupportedPresetShapes.begin(),
-    kSupportedPresetShapes.end(),
-    [preset](PresetShapeInfo const& info) { return info.preset == preset; }
-  );
-  return (it != kSupportedPresetShapes.end()) ? *it : kSupportedPresetShapes.front();
+  auto const idx = static_cast<std::size_t>(preset);
+  if (idx >= kSupportedPresetShapes.size()) {
+    return kSupportedPresetShapes.front();
+  }
+  return kSupportedPresetShapes[idx];
 }
 
 /**
@@ -932,6 +943,8 @@ public:
   [[nodiscard]]
   auto generate(std::vector<Shape> const& shapes) const {
     auto xml = std::string{header_};
+    // 1 図形あたり約 600 バイトを見積もって事前確保し O(N²) コピーを回避する
+    xml.reserve(header_.size() + shapes.size() * 600 + 16);
     for (auto const& shape : shapes) {
       xml += generate_anchor(shape);
     }
@@ -944,23 +957,18 @@ private:
    * @brief 空のテキストボディ向けに最小限の XML を生成します。
    * @return `xdr:txBody` 要素 XML 文字列です。
    */
-  static auto default_tx_body_xml() {
-    return std::string{"<xdr:txBody><a:bodyPr/><a:lstStyle/><a:p/></xdr:txBody>"};
+  static auto default_tx_body_xml() -> std::string_view {
+    return "<xdr:txBody><a:bodyPr/><a:lstStyle/><a:p/></xdr:txBody>";
   }
 
   /**
    * @brief 図形の共通スタイル（参照形式）XML を生成します。
+   *
+   * 不変な定数文字列なので static constexpr で保持しヒープ確保をゼロにします。
    * @return `xdr:style` 要素 XML 文字列です。
    */
-  auto generate_style_xml() const {
-    return std::string{
-      "<xdr:style>"
-        "<a:lnRef idx=\"2\"><a:schemeClr val=\"accent1\"/></a:lnRef>"
-        "<a:fillRef idx=\"1\"><a:schemeClr val=\"accent1\"/></a:fillRef>"
-        "<a:effectRef idx=\"0\"><a:schemeClr val=\"accent1\"/></a:effectRef>"
-        "<a:fontRef idx=\"minor\"><a:schemeClr val=\"lt1\"/></a:fontRef>"
-      "</xdr:style>"
-    };
+  static auto generate_style_xml() noexcept -> std::string_view {
+    return kStyleXml_;
   }
 
   /**
@@ -1070,6 +1078,14 @@ private:
     "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
     "<xdr:wsDr xmlns:xdr=\"http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing\" "
     "xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\">";
+
+  static constexpr std::string_view kStyleXml_ =
+    "<xdr:style>"
+      "<a:lnRef idx=\"2\"><a:schemeClr val=\"accent1\"/></a:lnRef>"
+      "<a:fillRef idx=\"1\"><a:schemeClr val=\"accent1\"/></a:fillRef>"
+      "<a:effectRef idx=\"0\"><a:schemeClr val=\"accent1\"/></a:effectRef>"
+      "<a:fontRef idx=\"minor\"><a:schemeClr val=\"lt1\"/></a:fontRef>"
+    "</xdr:style>";
 };
 
 

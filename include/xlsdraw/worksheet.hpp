@@ -56,7 +56,7 @@ public:
     rect.to = {.col = col, .col_off = *emu_w_result, .row = row, .row_off = *emu_h_result};
 
     if (!text.empty()) {
-      drawing::TextRun run{.text = std::string(text)};
+      drawing::TextRun run{.text = std::string(text), .color = std::nullopt};
       rect.text_body = drawing::TextBody{.paragraphs = {{.runs = {run}}}};
     }
 

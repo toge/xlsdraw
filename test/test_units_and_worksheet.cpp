@@ -97,3 +97,30 @@ TEST_CASE("WorksheetDrawingContext produces drawing XML for simple rectangles") 
   CHECK(xml.find("prst=\"rect\"") != std::string::npos);
   CHECK(xml.find("<xdr:sp>") != std::string::npos);
 }
+
+TEST_CASE("EmuConverter rejects negative inch values") {
+  auto const converter = xlsdraw::units::EmuConverter{96.0};
+  auto const result = converter.inches_to_emu(-0.5);
+  REQUIRE(!result.has_value());
+  CHECK(result.error() == xlsdraw::units::UnitError::NegativeValue);
+}
+
+TEST_CASE("WorksheetDrawingContext rejects negative width") {
+  auto const converter = xlsdraw::units::EmuConverter{96.0};
+  auto ctx = xlsdraw::worksheet::WorksheetDrawingContext{converter};
+
+  auto const result = ctx.add_simple_rect(1, 1, -100, 200);
+  REQUIRE(!result.has_value());
+  CHECK(result.error() == xlsdraw::drawing::DrawingManager::Error::InvalidPosition);
+  // 失敗しても次の追加は shape_count が 0 のまま
+  CHECK(ctx.final_xml().find("xdr:sp") == std::string::npos);
+}
+
+TEST_CASE("WorksheetDrawingContext rejects negative height") {
+  auto const converter = xlsdraw::units::EmuConverter{96.0};
+  auto ctx = xlsdraw::worksheet::WorksheetDrawingContext{converter};
+
+  auto const result = ctx.add_simple_rect(1, 1, 200, -50);
+  REQUIRE(!result.has_value());
+  CHECK(result.error() == xlsdraw::drawing::DrawingManager::Error::InvalidPosition);
+}

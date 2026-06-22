@@ -153,7 +153,9 @@ public:
       });
     }
 
-    if (zip_file_add(za_, internal_path.data(), source, ZIP_FL_OVERWRITE) < 0) {
+    // zip_file_add は null 終端文字列を要求するため std::string 経由で渡す
+    auto const filename = std::string(internal_path);
+    if (zip_file_add(za_, filename.c_str(), source, ZIP_FL_OVERWRITE) < 0) {
       zip_source_free(source);
       return std::unexpected(WriteError{
         .internal_path = std::string(internal_path),
