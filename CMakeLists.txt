@@ -12,21 +12,6 @@ option(XLSDRAW_BUILD_TESTS "Build xlsdraw tests" ON)
 option(XLSDRAW_BUILD_EXAMPLES "Build xlsdraw usage examples" ON)
 option(XLSDRAW_NATIVE_ARCH "Enable -march=native optimization (不可搬、配布ライブラリでは使用しないこと)" OFF)
 
-## add stdc++ compiler flag
-include(CheckCXXCompilerFlag)
-CHECK_CXX_COMPILER_FLAG("-std=c++26" COMPILER_SUPPORTS_CXX26)
-CHECK_CXX_COMPILER_FLAG("-std=c++23" COMPILER_SUPPORTS_CXX23)
-CHECK_CXX_COMPILER_FLAG("-std=c++20" COMPILER_SUPPORTS_CXX20)
-if(COMPILER_SUPPORTS_CXX26)
-    set(STD_CPP cxx_std_26)
-elseif(COMPILER_SUPPORTS_CXX23)
-    set(STD_CPP cxx_std_23)
-elseif(COMPILER_SUPPORTS_CXX20)
-    set(STD_CPP cxx_std_20)
-else()
-    message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++20 support. Please use a different C++ compiler.")
-endif()
-
 ## 警告フラグ（ビルドタイプを問わず適用）
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic")
@@ -69,7 +54,7 @@ target_include_directories(
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
 )
-target_compile_features(xlsdraw INTERFACE ${STD_CPP})
+target_compile_features(xlsdraw INTERFACE cxx_std_23)
 
 # xlsdraw uses libzip, pugixml, and fmt. Declare them as transitive
 # dependencies so consumers only need to find_package(xlsdraw).
@@ -144,5 +129,5 @@ endif()
 if(XLSDRAW_BUILD_EXAMPLES)
     add_executable(xlsdraw_example example/xlsdraw_example.cpp)
     target_link_libraries(xlsdraw_example PRIVATE xlsdraw::xlsdraw)
-    target_compile_features(xlsdraw_example PRIVATE ${STD_CPP})
+    target_compile_features(xlsdraw_example PRIVATE cxx_std_23)
 endif()
