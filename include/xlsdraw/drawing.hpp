@@ -998,9 +998,12 @@ private:
    * @return `xdr:twoCellAnchor` 要素 XML 文字列です。
    */
   auto generate_shape_anchor(Shape const& shape) const -> std::string {
-    auto const tx_body_xml = shape.text_body
-          ? shape.text_body->generate_xml()
-          : default_tx_body_xml();
+    std::string tx_body_xml;
+    if (shape.text_body.has_value()) {
+      tx_body_xml = shape.text_body->generate_xml();
+    } else {
+      tx_body_xml = default_tx_body_xml();
+    }
 
     return fmt::format(
       "<xdr:twoCellAnchor editAs=\"{0}\">"
@@ -1033,9 +1036,10 @@ private:
    * @return `xdr:twoCellAnchor` 要素 XML 文字列です。
    */
   auto generate_connector_anchor(Shape const& shape) const -> std::string {
-    auto const tx_body_xml = shape.text_body
-          ? shape.text_body->generate_xml()
-          : std::string{};
+    std::string tx_body_xml;
+    if (shape.text_body.has_value()) {
+      tx_body_xml = shape.text_body->generate_xml();
+    }
 
     return fmt::format(
       "<xdr:twoCellAnchor editAs=\"{0}\">"
