@@ -26,7 +26,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install build tools
-        run: dnf install -y gcc-c++ cmake ninja-build git curl zip unzip tar
+        run: dnf install -y gcc-c++ cmake ninja-build git curl zip unzip tar kernel-headers perl-IPC-Cmd
 
       - name: Check GCC version
         run: |
@@ -54,7 +54,8 @@ jobs:
       - name: Configure
         run: |
           cmake -B build -S . -G Ninja \
-            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: cmake --build build
@@ -113,7 +114,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install build tools
-        run: dnf install -y clang cmake ninja-build git curl zip unzip tar
+        run: dnf install -y clang cmake ninja-build git curl zip unzip tar kernel-headers perl-IPC-Cmd
 
       - name: Check Clang version
         run: clang++ --version
@@ -140,7 +141,8 @@ jobs:
           cmake -B build -S . -G Ninja \
             -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
             -DCMAKE_C_COMPILER=clang \
-            -DCMAKE_CXX_COMPILER=clang++
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: cmake --build build
@@ -178,7 +180,10 @@ jobs:
           fi
 
       - name: Configure
-        run: cmake -B build -S . -G Ninja -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake
+        run: |
+          cmake -B build -S . -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: cmake --build build

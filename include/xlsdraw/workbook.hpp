@@ -1,5 +1,4 @@
-#ifndef __XLSDRAW_WORKBOOK_HPP__
-#define __XLSDRAW_WORKBOOK_HPP__
+#pragma once
 
 #include <expected>
 #include <optional>
@@ -7,11 +6,12 @@
 #include <string_view>
 #include <utility>
 
-#include "fmt/core.h"
+#include "fmt/format.h"
 
 #include "xlsdraw/drawing.hpp"
 #include "xlsdraw/io.hpp"
 #include "xlsdraw/resource.hpp"
+#include "xlsdraw/xml_escape.hpp"
 
 /**
  * @file workbook.hpp
@@ -66,7 +66,7 @@ public:
   /**
    * @brief Workbook XML を生成します。
    * @param[in] sheet_rel_id ワークブックからワークシートへの Relationship ID です。
-   * @param[in] sheet_name シート名です。
+   * @param[in] sheet_name シート名です（XML エスケープ処理を行います）。
    * @return Workbook パート XML を返します。
    */
   static auto workbook_xml(std::string_view sheet_rel_id, std::string_view sheet_name) {
@@ -76,7 +76,7 @@ public:
       "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">"
       "<sheets><sheet name=\"{}\" sheetId=\"1\" r:id=\"{}\"/></sheets>"
       "</workbook>",
-      sheet_name,
+      xlsdraw::detail::xml_escape(sheet_name),
       sheet_rel_id
     );
   }
@@ -114,6 +114,7 @@ public:
    * @param[in] shape 追加する図形オブジェクト（@ref drawing::Shape）です。
    * @return 成功時は図形ハンドル（@ref ShapeHandle）、失敗時はエラーメッセージを返します。
    */
+  [[nodiscard]]
   auto add_shape(drawing::Shape shape) -> std::expected<ShapeHandle, std::string> {
     auto const shape_name = shape.name;
     auto const add_result = drawing_mgr_.add_shape(std::move(shape));
@@ -144,7 +145,9 @@ public:
    * @brief 登録済みの図形を ID 指定で取得し、プロパティを編集します。
    * @param[in] id 編集対象の図形 ID です。
    * @return 図形へのポインタを返します。指定した ID が存在しない場合は @c nullptr を返します。
+   * @warning std::vector の再確保が発生するとポインタが無効になります。
    */
+  [[nodiscard]]
   auto get_shape_mut(uint32_t id) -> drawing::Shape* {
     return drawing_mgr_.get_shape_mut(id);
   }
@@ -153,6 +156,7 @@ public:
    * @brief 登録されたすべてのデータ（シート、図形、パッケージ構造）を XLSX ファイルとして保存します。
    * @return 成功時は空の @c std::expected 、失敗時は詳細メッセージを返します。
    */
+  [[nodiscard]]
   auto save() -> std::expected<void, std::string> {
     if (sheet_name_.empty()) {
       return std::unexpected("sheet name must not be empty");
@@ -176,7 +180,7 @@ public:
     );
 
     auto package_rel_manager = resource::RelationshipManager{};
-    package_rel_manager.add_relationship(
+    std::ignore = package_rel_manager.add_relationship(
       "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
       detail::kOfficeDocumentTarget
     );
@@ -202,7 +206,12 @@ public:
     );
     auto const workbook_xml = detail::SingleSheetOpenXmlParts::workbook_xml(sheet_rel_id, sheet_name_);
 
+    // アーカイブのオープン失敗を即時検出する
     auto writer = io::ArchiveWriter(output_path_);
+    if (!writer.is_open()) {
+      return std::unexpected(fmt::format("failed to open archive: '{}'", output_path_));
+    }
+
     auto const content_types_xml = content_types_mgr.generate_xml();
     auto const package_rels_xml = package_rel_manager.generate_xml();
     auto const workbook_rels_xml = workbook_rel_manager.generate_xml();
@@ -221,6 +230,14 @@ public:
       if (auto r = write_required_file(writer, detail::kDrawingPath, drawing_xml); !r) return r;
     }
 
+    // zip_close の失敗を明示的に検出してエラーとして伝播する
+    if (auto r = writer.close(); !r) {
+      return std::unexpected(fmt::format(
+        "failed to finalize archive '{}': {}",
+        output_path_,
+        r.error().message
+      ));
+    }
     return {};
   }
 
@@ -251,5 +268,3 @@ private:
 };
 
 } // namespace xlsdraw::workbook
-
-#endif /* __XLSDRAW_WORKBOOK_HPP__ */

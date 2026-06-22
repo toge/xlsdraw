@@ -1,10 +1,7 @@
-#ifndef __XLSDRAW_UNITS_HPP__
-#define __XLSDRAW_UNITS_HPP__
+#pragma once
 
 #include <cstdint>
 #include <expected>
-#include <string>
-#include <cstdint>
 
 /**
  * @file units.hpp
@@ -79,5 +76,3 @@ private:
 };
 
 } // namespace xlsdraw::units
-
-#endif /* __XLSDRAW_UNITS_HPP__ */

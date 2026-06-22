@@ -1,5 +1,4 @@
-#ifndef __XLSDRAW_DRAWING_HPP__
-#define __XLSDRAW_DRAWING_HPP__
+#pragma once
 
 #include <algorithm>
 #include <array>
@@ -12,9 +11,10 @@
 #include <variant>
 #include <vector>
 
-#include "fmt/core.h"
+#include "fmt/format.h"
 
 #include "xlsdraw/units.hpp"
+#include "xlsdraw/xml_escape.hpp"
 
 /**
  * @file drawing.hpp
@@ -37,6 +37,7 @@ struct Marker {
    * @param[in] tag 出力する要素名です。例: `xdr:from` / `xdr:to`。
    * @return 指定タグ名で包んだ XML を返します。
    */
+  [[nodiscard]]
   auto to_xml(std::string_view tag) const {
     return fmt::format(
       "<{0}>"
@@ -462,16 +463,6 @@ inline auto preset_shape_render_kind(PresetShape preset) noexcept -> ShapeRender
   return preset_shape_info(preset).render_kind;
 }
 
-/**
- * @brief ワークシートに挿入される画像（図形とは別の描画要素）の情報です。
- */
-struct Image {
-  uint32_t id;      ///< 画像の一意な ID です。
-  std::string name; ///< 画像の表示名です。
-  std::string rId;  ///< 画像リソース（xl/media/ 内のファイル）への Relationship ID です。
-  Marker from;      ///< 画像の左上角の配置位置です。
-  Marker to;        ///< 画像の右下角の配置位置です。
-};
 
 /**
  * @brief ARGB 形式の色情報を保持する構造体です。
@@ -488,6 +479,7 @@ struct Color {
    * @brief 色情報を OpenXML の `a:srgbClr` 要素 XML に変換します。
    * @return 生成された XML 文字列です。
    */
+  [[nodiscard]]
   auto generate_xml() const -> std::string {
     return fmt::format("<a:srgbClr val=\"{}\"/>", argb);
   }
@@ -499,12 +491,13 @@ struct Color {
 struct LineProperties {
   std::optional<int64_t> width_emu;  ///< 線の太さを EMU 単位で指定します。未指定時はシステムの既定値が使われます。
   std::optional<Color> color;        ///< 線の色を指定します。
-  std::string_view cap_type{"flat"}; ///< 線の端の形状（flat, round, sq）を指定します。
+  std::string cap_type{"flat"}; ///< 線の端の形状（flat, round, sq）を指定します。
 
   /**
    * @brief 線のスタイルを OpenXML の `a:ln` 要素 XML に変換します。
    * @return 生成された XML 文字列です。
    */
+  [[nodiscard]]
   auto generate_xml() const -> std::string {
     auto xml = std::string{"<a:ln"};
     if (width_emu) {
@@ -541,6 +534,7 @@ struct FillProperties {
      * @brief 停止点情報を OpenXML の `a:gs` 要素 XML に変換します。
      * @return 生成された XML 文字列です。
      */
+    [[nodiscard]]
     auto generate_xml() const -> std::string {
       auto const color_xml = color.generate_xml();
       return fmt::format("<a:gs pos=\"{}\">{}</a:gs>", position, color_xml);
@@ -563,6 +557,7 @@ struct FillProperties {
      * @brief 線形グラデーション設定を OpenXML の `a:lin` 要素 XML に変換します。
      * @return 生成された XML 文字列です。
      */
+    [[nodiscard]]
     auto generate_xml() const -> std::string {
       return fmt::format("<a:lin ang=\"{}\" scaled=\"{}\"/>", angle, scaled ? 1 : 0);
     }
@@ -581,6 +576,7 @@ struct FillProperties {
      * @brief 適用範囲矩形を OpenXML の `a:fillToRect` 要素 XML に変換します。
      * @return 生成された XML 文字列です。
      */
+    [[nodiscard]]
     auto generate_xml() const -> std::string {
       auto xml = std::string{"<a:fillToRect"};
       if (l) {
@@ -620,6 +616,7 @@ struct FillProperties {
      * @brief パスグラデーションの設定を OpenXML の `a:path` 要素 XML に変換します。
      * @return 生成された XML 文字列です。
      */
+    [[nodiscard]]
     auto generate_xml() const -> std::string {
       auto const path_name = [this]() -> std::string_view {
         switch (path) {
@@ -653,6 +650,7 @@ struct FillProperties {
      * @brief グラデーション設定全体を OpenXML の `a:gradFill` 要素 XML に変換します。
      * @return 生成された XML 文字列です。停止点が不足している場合は空文字列を返します。
      */
+    [[nodiscard]]
     auto generate_xml() const -> std::string {
       if (stops.size() < 2) {
         return {};
@@ -675,6 +673,7 @@ struct FillProperties {
    * @brief 塗りつぶし XML を生成します。
    * @return `a:solidFill` / `a:gradFill` / `a:noFill` のいずれかを返します。
    */
+  [[nodiscard]]
   auto generate_xml() const -> std::string {
     if (gradient_fill) {
       auto const gradient_xml = gradient_fill->generate_xml();
@@ -715,6 +714,7 @@ struct TextRun {
    * @brief テキストラン XML を生成します。
    * @return `a:r` 要素 XML を返します。
    */
+  [[nodiscard]]
   auto generate_xml() const {
     auto const sz = static_cast<int>(font_size * 100);
 
@@ -724,7 +724,8 @@ struct TextRun {
     }
     rPr += "</a:rPr>";
 
-    return fmt::format("<a:r>{0}<a:t>{1}</a:t></a:r>", rPr, text);
+    // ユーザ入力テキストを XML エスケープして埋め込む
+    return fmt::format("<a:r>{0}<a:t>{1}</a:t></a:r>", rPr, detail::xml_escape(text));
   }
 };
 
@@ -732,13 +733,14 @@ struct TextRun {
  * @brief 段落を表します。
  */
 struct Paragraph {
-  std::vector<TextRun> runs;        ///< 含まれるテキストランです。
-  std::string_view alignment{"ctr"}; ///< 段落配置です。
+  std::vector<TextRun> runs;   ///< 含まれるテキストランです。
+  std::string alignment{"ctr"}; ///< 段落配置です。
 
   /**
    * @brief 段落 XML を生成します。
    * @return `a:p` 要素 XML を返します。
    */
+  [[nodiscard]]
   auto generate_xml() const {
     auto xml = fmt::format("<a:p><a:pPr algn=\"{}\"/>", alignment);
     for (auto const& run : runs) {
@@ -760,6 +762,7 @@ struct TextBody {
    * @brief テキストボディ全体を OpenXML の `xdr:txBody` 要素 XML に変換します。
    * @return 生成された XML 文字列です。
    */
+  [[nodiscard]]
   auto generate_xml() const {
     auto const anchor = vertical_centered ? "ctr" : "t";
     auto xml = fmt::format("<xdr:txBody><a:bodyPr anchor=\"{}\" rtlCol=\"0\"><a:spAutoFit/></a:bodyPr><a:lstStyle/>", anchor);
@@ -790,8 +793,6 @@ struct Shape {
   std::optional<ShapeRenderKind> render_kind; ///< 明示的に描画種別（Shape または Connector）を指定します。
   Marker from;                              ///< 図形の開始（左上）位置です。
   Marker to;                                ///< 図形の終了（右下）位置です。
-  std::string color_argb{"FF4472C4"};       ///< 旧来の簡易指定用の色情報です。
-  std::string text;                         ///< 旧来の簡易指定用のテキスト情報です。
   AnchorType anchor{AnchorType::MoveButNoSize}; ///< セルの移動やサイズ変更に対する図形の追従挙動を指定します。
   ShapeStyle style;                         ///< 塗りつぶしや線などの詳細なスタイル設定です。
   std::optional<TextBody> text_body;        ///< 段落や書式を含む詳細なリッチテキスト設定です。
@@ -903,7 +904,20 @@ public:
   }
 };
 
-using namespace std::string_view_literals;
+/**
+ * @brief @ref AnchorType を OpenXML の `editAs` 属性値に変換します。
+ * @param[in] anchor 変換対象のアンカー種別です。
+ * @return `editAs` 属性に指定する文字列を返します。
+ */
+[[nodiscard]]
+inline auto anchor_type_to_edit_as(AnchorType anchor) noexcept -> std::string_view {
+  switch (anchor) {
+    case AnchorType::MoveAndSize:   return "twoCell";
+    case AnchorType::MoveButNoSize: return "oneCell";
+    case AnchorType::NoMoveNoSize:  return "absolute";
+  }
+  return "oneCell";
+}
 
 /**
  * @brief 図形配列から SpreadsheetDrawing XML を生成します。
@@ -915,6 +929,7 @@ public:
    * @param[in] shapes 生成対象の図形リストです。
    * @return `xl/drawings/drawing*.xml` として保存可能な XML 文字列です。
    */
+  [[nodiscard]]
   auto generate(std::vector<Shape> const& shapes) const {
     auto xml = std::string{header_};
     for (auto const& shape : shapes) {
@@ -980,23 +995,24 @@ private:
           : default_tx_body_xml();
 
     return fmt::format(
-      "<xdr:twoCellAnchor editAs=\"oneCell\">"
-        "{0}{1}" // from, to
+      "<xdr:twoCellAnchor editAs=\"{0}\">"
+        "{1}{2}" // from, to
         "<xdr:sp>"
           "<xdr:nvSpPr>"
-            "<xdr:cNvPr id=\"{2}\" name=\"{3} {2}\"/>"
+            "<xdr:cNvPr id=\"{3}\" name=\"{4} {3}\"/>"
             "<xdr:cNvSpPr/>"
           "</xdr:nvSpPr>"
-          "{4}" // spPr (スタイル適用)
-          "{5}" // style
-          "{6}" // txBody
+          "{5}" // spPr (スタイル適用)
+          "{6}" // style
+          "{7}" // txBody
         "</xdr:sp>"
         "<xdr:clientData/>"
       "</xdr:twoCellAnchor>",
+      anchor_type_to_edit_as(shape.anchor),
       shape.from.to_xml("xdr:from"),
       shape.to.to_xml("xdr:to"),
       shape.id,
-      shape.name,
+      detail::xml_escape(shape.name),
       generate_spPr(shape),
       generate_style_xml(),
       tx_body_xml
@@ -1014,23 +1030,24 @@ private:
           : std::string{};
 
     return fmt::format(
-      "<xdr:twoCellAnchor editAs=\"oneCell\">"
-        "{0}{1}" // from, to
+      "<xdr:twoCellAnchor editAs=\"{0}\">"
+        "{1}{2}" // from, to
         "<xdr:cxnSp>"
           "<xdr:nvCxnSpPr>"
-            "<xdr:cNvPr id=\"{2}\" name=\"{3} {2}\"/>"
+            "<xdr:cNvPr id=\"{3}\" name=\"{4} {3}\"/>"
             "<xdr:cNvCxnSpPr/>"
           "</xdr:nvCxnSpPr>"
-          "{4}" // spPr
-          "{5}" // style
-          "{6}" // optional txBody
+          "{5}" // spPr
+          "{6}" // style
+          "{7}" // optional txBody
         "</xdr:cxnSp>"
         "<xdr:clientData/>"
       "</xdr:twoCellAnchor>",
+      anchor_type_to_edit_as(shape.anchor),
       shape.from.to_xml("xdr:from"),
       shape.to.to_xml("xdr:to"),
       shape.id,
-      shape.name,
+      detail::xml_escape(shape.name),
       generate_spPr(shape),
       generate_style_xml(),
       tx_body_xml
@@ -1049,10 +1066,10 @@ private:
     return generate_shape_anchor(shape);
   }
 
-  static constexpr auto header_ =
+  static constexpr std::string_view header_ =
     "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
     "<xdr:wsDr xmlns:xdr=\"http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing\" "
-    "xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\">"sv;
+    "xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\">";
 };
 
 
@@ -1067,7 +1084,6 @@ public:
   enum class Error : std::uint8_t {
     InvalidPosition, ///< 終点（to）の座標が始点（from）より左または上にある場合に発生します。
     InvalidGeometry, ///< 図形のジオメトリ名（プリセット名）が空の場合に発生します。
-    DuplicateId      ///< 予約済みの ID 重複エラーです（現在の実装では使用されません）。
   };
 
   /**
@@ -1084,9 +1100,9 @@ public:
    * @param[in] shape 登録する図形オブジェクトです。入力された Shape の id フィールドは上書きされます。
    * @return 成功時は割り当てられた図形 ID、失敗時はエラー種別 (@ref Error) を返します。
    */
+  [[nodiscard]]
   auto add_shape(Shape shape) -> std::expected<uint32_t, Error> {
-    shape.id = next_id_++;
-
+    // 検証を ID 採番より先に行い、失敗時に ID を消費しない
     if (shape_geometry_prst(shape).empty()) {
       return std::unexpected(Error::InvalidGeometry);
     }
@@ -1095,8 +1111,10 @@ public:
       return std::unexpected(Error::InvalidPosition);
     }
 
+    auto const id = next_id_++;
+    shape.id = id;
     shapes_.push_back(std::move(shape));
-    return shape.id;
+    return id;
   }
 
   /**
@@ -1122,7 +1140,9 @@ public:
    * @brief 指定した ID を持つ図形を取得し、直接編集可能なポインタを返します。
    * @param[in] id 検索対象の図形 ID です。
    * @return 図形が見つかった場合はそのポインタ、見つからない場合は @c nullptr を返します。
+   * @warning std::vector の再確保が発生するとポインタが無効になります。編集後は図形を追加しないでください。
    */
+  [[nodiscard]]
   auto get_shape_mut(uint32_t id) -> Shape* {
     auto it = std::find_if(shapes_.begin(), shapes_.end(),
                            [id](auto const& s) { return s.id == id; });
@@ -1146,12 +1166,8 @@ inline auto drawing_manager_error_message(DrawingManager::Error error) noexcept 
       return "invalid shape position";
     case DrawingManager::Error::InvalidGeometry:
       return "shape geometry is not set";
-    case DrawingManager::Error::DuplicateId:
-      return "duplicate shape id";
   }
   return "unknown drawing manager error";
 }
 
 } // namespace xlsdraw::drawing
-
-#endif /* __XLSDRAW_DRAWING_HPP__ */

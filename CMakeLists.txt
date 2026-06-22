@@ -7,6 +7,11 @@ project(
     HOMEPAGE_URL "https://github.com/toge/xlsdraw"
 )
 
+## ビルドオプション（副作用より前に宣言する）
+option(XLSDRAW_BUILD_TESTS "Build xlsdraw tests" ON)
+option(XLSDRAW_BUILD_EXAMPLES "Build xlsdraw usage examples" ON)
+option(XLSDRAW_NATIVE_ARCH "Enable -march=native optimization (不可搬、配布ライブラリでは使用しないこと)" OFF)
+
 ## add stdc++ compiler flag
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++26" COMPILER_SUPPORTS_CXX26)
@@ -22,10 +27,9 @@ else()
     message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++20 support. Please use a different C++ compiler.")
 endif()
 
-## add warning
-if(CMAKE_COMPILER_IS_GNUCXX)
+## 警告フラグ（ビルドタイプを問わず適用）
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g3")
 endif()
 
 if(MSVC)
@@ -36,12 +40,16 @@ if(MSVC)
     endif()
 endif()
 
-## optimization
-if(CMAKE_COMPILER_IS_GNUCXX)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native")
-endif()
-if(MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Ox")
+## 最適化フラグ（ビルドタイプ別に制御する）
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -O3")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3")
+    if(XLSDRAW_NATIVE_ARCH)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+    endif()
+elseif(MSVC)
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Ox")
 endif()
 
 ## other flag
@@ -128,9 +136,6 @@ install(
 # ---------------------------------------------------------------------------
 # Tests and a minimal usage sample.
 # ---------------------------------------------------------------------------
-option(XLSDRAW_BUILD_TESTS "Build xlsdraw tests" ON)
-option(XLSDRAW_BUILD_EXAMPLES "Build xlsdraw usage examples" ON)
-
 if(XLSDRAW_BUILD_TESTS)
     enable_testing()
     add_subdirectory(test)

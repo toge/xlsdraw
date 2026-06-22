@@ -45,13 +45,6 @@ save-commands.json
 
 compile_commands.json
 
-*.fig
-*.eps
-*.svg
-
-build*.sh
-test.sh
-
 *.log
 *.csv
 *.xlsx

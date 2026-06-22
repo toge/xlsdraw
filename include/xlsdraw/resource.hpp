@@ -1,11 +1,11 @@
-#ifndef __XLSDRAW_RESOURCE_HPP__
-#define __XLSDRAW_RESOURCE_HPP__
+#pragma once
 
 #include <string>
 #include <map>
+#include <vector>
 #include <string_view>
 
-#include "fmt/core.h"
+#include "fmt/format.h"
 
 /**
  * @file resource.hpp
@@ -37,9 +37,10 @@ public:
    * @param[in] target 参照先パートへの相対パスです。
    * @return 自動生成された Relationship ID (例: "rId1") を返します。
    */
+  [[nodiscard]]
   auto add_relationship(std::string_view type, std::string_view target) {
     auto const next_id = fmt::format("rId{}", rels_.size() + 1);
-    rels_[next_id] = Relationship{next_id, std::string(type), std::string(target)};
+    rels_.push_back(Relationship{next_id, std::string(type), std::string(target)});
     return next_id;
   }
 
@@ -47,10 +48,11 @@ public:
    * @brief 現在登録されているすべての依存関係を Relationships XML として生成します。
    * @return 生成された XML 文字列です。
    */
+  [[nodiscard]]
   auto generate_xml() const {
     auto xml = std::string{"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
                            "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"};
-    for (auto const& [id, rel] : rels_) {
+    for (auto const& rel : rels_) {
       xml += fmt::format("<Relationship Id=\"{}\" Type=\"{}\" Target=\"{}\"/>",
                          rel.id, rel.type, rel.target);
     }
@@ -59,7 +61,7 @@ public:
   }
 
 private:
-  std::map<std::string, Relationship> rels_; ///< ID をキーとした Relationship のマップです。
+  std::vector<Relationship> rels_; ///< 挿入順を保持する Relationship リストです。
 };
 
 /**
@@ -137,5 +139,3 @@ private:
 };
 
 } // namespace xlsdraw::resource
-
-#endif /* __XLSDRAW_RESOURCE_HPP__ */

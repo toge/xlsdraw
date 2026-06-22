@@ -2,7 +2,6 @@ Checks: >
   -*,
   boost-*,
   bugprone-*,
-  bugprone-exception-escape,
   clang-diagnostic-*,
   cppcoreguidelines-*,
   -cppcoreguidelines-avoid-magic-numbers,
@@ -18,25 +17,25 @@ Checks: >
   modernize-*,
   -modernize-use-trailing-return-type,
   performance-*,
-  portabilty-*,
+  portability-*,
 
 CheckOptions:
   - key:             readability-identifier-naming.ClassCase
-    value:           lower_case
+    value:           CamelCase
   - key:             readability-identifier-naming.EnumCase
-    value:           lower_case
+    value:           CamelCase
   - key:             readability-identifier-naming.FunctionCase
-    value:           camelBack
+    value:           lower_case
   - key:             readability-identifier-naming.MemberCase
     value:           lower_case
   - key:             readability-identifier-naming.ParameterCase
     value:           lower_case
   - key:             readability-identifier-naming.UnionCase
-    value:           lower_case
+    value:           CamelCase
   - key:             readability-identifier-naming.ConstantCase
-    value:           upper_case
+    value:           UPPER_CASE
   - key:             readability-identifier-naming.ConstexprVariableCase
-    value:           upper_case
+    value:           UPPER_CASE
   - key:             readability-identifier-naming.IgnoreMainLikeFunctions
     value:           1
   - key:             readability-identifier-naming.VariableCase
